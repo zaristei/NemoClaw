@@ -250,15 +250,35 @@ console.log('State management: create, save, load, clear all working');
 " && pass "NemoClaw state management works" || fail "State management broken"
 
 # -------------------------------------------------------
-info "10. Verify sandbox bootstrap creates openclaw.json"
+info "11. Verify launch bootstraps openclaw.json in the sandbox"
 # -------------------------------------------------------
-mkdir -p /tmp/fake-bin /tmp/fake-sandbox
+rm -rf /tmp/fake-bin /tmp/fake-sandbox /tmp/fake-home
+mkdir -p /tmp/fake-bin /tmp/fake-sandbox /tmp/fake-home
+
 cat > /tmp/fake-bin/openshell <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
 root="${FAKE_SANDBOX_ROOT:?}"
-printf '%s\n' "$*" > "${root}/invocation.txt"
+printf '%s\n' "$*" >> "${root}/invocation.txt"
+
+if [ "$1" = "--version" ]; then
+    echo "0.1.0"
+    exit 0
+fi
+
+if [ "$1" = "sandbox" ] && [ "$2" = "create" ]; then
+    mkdir -p "${root}/openclaw"
+    exit 0
+fi
+
+if [ "$1" = "provider" ] && [ "$2" = "create" ]; then
+    exit 0
+fi
+
+if [ "$1" = "inference" ] && [ "$2" = "set" ]; then
+    exit 0
+fi
 
 if [ "$1" = "sandbox" ] && [ "$2" = "connect" ] && [ "$4" = "--" ] && [ "$5" = "openclaw" ] && [ "$6" = "setup" ]; then
     sandbox_root="${root}/$3/.openclaw"
@@ -283,8 +303,36 @@ exit 1
 EOF
 chmod +x /tmp/fake-bin/openshell
 
-PATH="/tmp/fake-bin:$PATH" FAKE_SANDBOX_ROOT=/tmp/fake-sandbox node - <<'EOF'
-const { ensureSandboxOpenClawSetup } = require('/opt/nemoclaw/dist/commands/sandbox-bootstrap.js');
+cat > /tmp/fake-bin/openclaw <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$1" = "--version" ]; then
+    echo "2026.3.11"
+    exit 0
+fi
+
+echo "unexpected openclaw invocation: $*" >&2
+exit 1
+EOF
+chmod +x /tmp/fake-bin/openclaw
+
+PATH="/tmp/fake-bin:$PATH" FAKE_SANDBOX_ROOT=/tmp/fake-sandbox HOME=/tmp/fake-home node - <<'EOF'
+const fs = require('node:fs');
+const resolveModule = require('/opt/nemoclaw/dist/blueprint/resolve.js');
+resolveModule.resolveBlueprint = async () => ({
+  version: '0.1.0',
+  localPath: '/sandbox/.nemoclaw/blueprints/0.1.0',
+  manifest: {
+    version: '0.1.0',
+    minOpenShellVersion: '0.1.0',
+    minOpenClawVersion: '2026.3.0',
+    profiles: ['default'],
+    digest: '',
+  },
+  cached: true,
+});
+const { cliLaunch } = require('/opt/nemoclaw/dist/commands/launch.js');
 
 const logger = {
   info() {},
@@ -295,21 +343,45 @@ const logger = {
   debug() {},
 };
 
-const ok = ensureSandboxOpenClawSetup({ sandboxName: 'openclaw', logger });
-if (!ok) {
-  throw new Error('bootstrap helper returned false');
+async function main() {
+  await cliLaunch({
+    force: true,
+    profile: 'default',
+    logger,
+    pluginConfig: {
+      blueprintVersion: '0.1.0',
+      blueprintRegistry: 'ghcr.io/nvidia/nemoclaw-blueprint',
+      sandboxName: 'openclaw',
+      inferenceProvider: 'nvidia',
+    },
+  });
+
+  const state = JSON.parse(
+    fs.readFileSync('/tmp/fake-home/.nemoclaw/state/nemoclaw.json', 'utf8'),
+  );
+  if (state.lastAction !== 'launch') {
+    throw new Error(`Unexpected lastAction: ${state.lastAction}`);
+  }
+  if (state.sandboxName !== 'openclaw') {
+    throw new Error(`Unexpected sandboxName: ${state.sandboxName}`);
+  }
 }
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
 EOF
 
 grep -q '^sandbox connect openclaw -- openclaw setup$' /tmp/fake-sandbox/invocation.txt \
-    && pass "Sandbox bootstrap calls openclaw setup" \
-    || fail "Sandbox bootstrap did not run openclaw setup"
+    && pass "Launch bootstraps OpenClaw with openclaw setup" \
+    || fail "Launch did not run openclaw setup"
 [ -f /tmp/fake-sandbox/openclaw/.openclaw/openclaw.json ] \
-    && pass "Sandbox bootstrap created openclaw.json" \
-    || fail "Sandbox bootstrap did not create openclaw.json"
+    && pass "Launch created openclaw.json" \
+    || fail "Launch did not create openclaw.json"
 [ -d /tmp/fake-sandbox/openclaw/.openclaw/workspace ] \
-    && pass "Sandbox bootstrap created workspace" \
-    || fail "Sandbox bootstrap did not create workspace"
+    && pass "Launch created workspace" \
+    || fail "Launch did not create workspace"
 
 echo ""
 echo -e "${GREEN}========================================${NC}"
