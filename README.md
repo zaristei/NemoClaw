@@ -22,6 +22,11 @@ First run prompts for your NVIDIA API Key (get one from [build.nvidia.com](https
 - Docker
 - [OpenShell CLI](https://github.com/NVIDIA/OpenShell/releases) (binary download)
 
+The repo-owned sandbox image installs `systemd` and `dbus-user-session` so
+OpenClaw's managed Gateway install can work when the runtime supports
+user-systemd. NemoClaw still falls back to a direct background Gateway process
+for headless/container sessions where `systemctl --user` is unavailable.
+
 ### Ubuntu 24.04 (fresh install)
 
 > **Minimum 8GB RAM** — the sandbox image is ~1.5 GiB and will OOM-kill on 4GB VMs.

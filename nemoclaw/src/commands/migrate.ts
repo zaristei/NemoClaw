@@ -16,6 +16,7 @@ import {
   loadSnapshotManifest,
   type SnapshotBundle,
 } from "./migration-state.js";
+import { ensureSandboxOpenClawBootstrap } from "./sandbox-bootstrap.js";
 
 export { detectHostOpenClaw, type HostOpenClawState } from "./migration-state.js";
 
@@ -144,6 +145,19 @@ export async function cliMigrate(opts: MigrateOptions): Promise<void> {
 
     logger.info("Verifying sandbox migration...");
     verifySandboxMigration(bundle, pluginConfig.sandboxName);
+
+    logger.info("Bootstrapping sandbox OpenClaw services...");
+    const bootstrapped = ensureSandboxOpenClawBootstrap({
+      sandboxName: pluginConfig.sandboxName,
+      logger,
+    });
+    if (!bootstrapped) {
+      logger.error("Sandbox bootstrap failed after migration sync.");
+      logger.info(
+        "Your host installation is unchanged. Resolve the sandbox issue and rerun migrate.",
+      );
+      return;
+    }
 
     saveState({
       ...loadState(),

@@ -76,13 +76,13 @@ async function cliLaunch(opts) {
         logger.error(`Blueprint apply failed: ${applyResult.output}`);
         return;
     }
-    logger.info("Initializing OpenClaw inside the sandbox...");
-    const initialized = (0, sandbox_bootstrap_js_1.ensureSandboxOpenClawSetup)({
+    logger.info("Bootstrapping OpenClaw inside the sandbox...");
+    const bootstrapped = (0, sandbox_bootstrap_js_1.ensureSandboxOpenClawBootstrap)({
         sandboxName: pluginConfig.sandboxName,
         logger,
     });
-    if (!initialized) {
-        logger.error("Sandbox bootstrap failed before OpenClaw could create its initial config.");
+    if (!bootstrapped) {
+        logger.error("Sandbox bootstrap failed before OpenClaw became ready for headless use.");
         return;
     }
     // Save state

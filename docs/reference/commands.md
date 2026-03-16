@@ -29,10 +29,15 @@ Both interfaces are installed when you run `npm install -g nemoclaw`.
 
 ### `openclaw nemoclaw launch`
 
-Bootstrap OpenClaw inside an OpenShell sandbox.
-After provisioning the sandbox, NemoClaw runs `openclaw setup` inside it so
-`openclaw.json`, the default workspace, and session directories exist before first use.
-If NemoClaw detects an existing host installation, `launch` stops and points you to `openclaw nemoclaw migrate` unless you pass `--force`.
+Bootstrap a fresh OpenClaw installation inside an OpenShell sandbox.
+After provisioning the sandbox, NemoClaw runs `openclaw setup` and
+`openclaw gateway install` inside it so the config, workspace, sessions,
+gateway auth token, and managed service all exist before first use.
+If NemoClaw detects an existing host installation, `launch` stops and points you
+to `openclaw nemoclaw migrate` unless you pass `--force`.
+If Linux user-systemd is unavailable inside the sandbox, NemoClaw falls back
+to a direct background `openclaw gateway run --force` start so headless
+bootstrap still completes.
 
 ```console
 $ openclaw nemoclaw launch [--force] [--profile <profile>]
@@ -48,7 +53,12 @@ $ openclaw nemoclaw launch [--force] [--profile <profile>]
 ### `openclaw nemoclaw migrate`
 
 Migrate an existing host OpenClaw installation into an OpenShell sandbox.
-The command snapshots the resolved OpenClaw state, captures external agent roots referenced by config, preserves symlinks in tar archives, rewrites migrated config paths, and verifies the migrated paths inside the sandbox.
+The command snapshots the resolved OpenClaw state, captures external agent roots
+referenced by config, preserves symlinks in tar archives, rewrites migrated
+config paths, verifies the migrated paths inside the sandbox, and then re-runs
+the same headless bootstrap so migrated installs also have a ready gateway
+token and Gateway runtime even when the sandbox cannot host a user-systemd
+service.
 
 ```console
 $ openclaw nemoclaw migrate [--dry-run] [--profile <profile>] [--skip-backup]

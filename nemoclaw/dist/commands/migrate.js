@@ -11,6 +11,7 @@ const verify_js_1 = require("../blueprint/verify.js");
 const exec_js_1 = require("../blueprint/exec.js");
 const state_js_1 = require("../blueprint/state.js");
 const migration_state_js_1 = require("./migration-state.js");
+const sandbox_bootstrap_js_1 = require("./sandbox-bootstrap.js");
 var migration_state_js_2 = require("./migration-state.js");
 Object.defineProperty(exports, "detectHostOpenClaw", { enumerable: true, get: function () { return migration_state_js_2.detectHostOpenClaw; } });
 const SANDBOX_ARCHIVE_DIR = "/sandbox/.nemoclaw/migration/archives";
@@ -114,6 +115,16 @@ async function cliMigrate(opts) {
         syncSnapshotBundleIntoSandbox(bundle, pluginConfig.sandboxName);
         logger.info("Verifying sandbox migration...");
         verifySandboxMigration(bundle, pluginConfig.sandboxName);
+        logger.info("Bootstrapping sandbox OpenClaw services...");
+        const bootstrapped = (0, sandbox_bootstrap_js_1.ensureSandboxOpenClawBootstrap)({
+            sandboxName: pluginConfig.sandboxName,
+            logger,
+        });
+        if (!bootstrapped) {
+            logger.error("Sandbox bootstrap failed after migration sync.");
+            logger.info("Your host installation is unchanged. Resolve the sandbox issue and rerun migrate.");
+            return;
+        }
         (0, state_js_1.saveState)({
             ...(0, state_js_1.loadState)(),
             lastRunId: applyResult.runId,
