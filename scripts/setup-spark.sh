@@ -7,18 +7,17 @@
 # Spark ships Ubuntu 24.04 (cgroup v2) + Docker 28.x but no k3s.
 # OpenShell's gateway starts k3s inside a Docker container, which
 # needs cgroup host namespace access. This script configures Docker
-# for that, then hands off to the normal setup.sh.
+# for that.
 #
 # Usage:
 #   sudo nemoclaw setup-spark
 #   # or directly:
 #   sudo bash scripts/setup-spark.sh
 #
-# What it does (beyond setup.sh):
+# What it does:
 #   1. Adds current user to docker group (avoids sudo for everything else)
 #   2. Configures Docker daemon for cgroupns=host (k3s-in-Docker on cgroup v2)
 #   3. Restarts Docker
-#   4. Runs the normal setup.sh
 
 set -euo pipefail
 
@@ -172,18 +171,10 @@ else
   fi
 fi
 
-# ── 5. Run normal setup ──────────────────────────────────────────
+# ── Done ─────────────────────────────────────────────────────────
 
-info "Running NemoClaw setup..."
 echo ""
-
-# Drop back to the real user for setup.sh (uses docker group, not root)
-if [ -n "$REAL_USER" ]; then
-  # Pass through env vars that setup.sh needs
-  sudo -u "$REAL_USER" -E \
-    NVIDIA_API_KEY="${NVIDIA_API_KEY:-}" \
-    DOCKER_HOST="${DOCKER_HOST:-}" \
-    bash "$SCRIPT_DIR/setup.sh"
-else
-  bash "$SCRIPT_DIR/setup.sh"
-fi
+info "DGX Spark Docker configuration complete."
+info ""
+info "Next step: run 'nemoclaw onboard' to set up your sandbox."
+info "  nemoclaw onboard"
