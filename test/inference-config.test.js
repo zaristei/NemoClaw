@@ -19,7 +19,7 @@ describe("inference selection config", () => {
       ncpPartner: null,
       model: DEFAULT_OLLAMA_MODEL,
       profile: "ollama",
-      credentialEnv: "OPENAI_API_KEY",
+      credentialEnv: "OLLAMA_API_KEY",
     });
   });
 

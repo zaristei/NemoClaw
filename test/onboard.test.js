@@ -14,14 +14,17 @@ describe("onboard helpers", () => {
       ncpPartner: null,
       model: "nemotron-3-nano:30b",
       profile: "ollama",
-      credentialEnv: "OPENAI_API_KEY",
+      credentialEnv: "OLLAMA_API_KEY",
       onboardedAt: "2026-03-18T12:00:00.000Z",
     });
 
     assert.match(script, /cat > ~\/\.nemoclaw\/config\.json/);
     assert.match(script, /"model": "nemotron-3-nano:30b"/);
+    assert.match(script, /"credentialEnv": "OLLAMA_API_KEY"/);
     assert.match(script, /openclaw models set 'ollama\/nemotron-3-nano:30b'/);
     assert.match(script, /cfg\.setdefault\('agents', \{\}\)\.setdefault\('defaults', \{\}\)\.setdefault\('model', \{\}\)\['primary'\]/);
+    assert.match(script, /providers_cfg\["ollama"\]/);
+    assert.match(script, /"apiKey":"ollama-local"/);
     assert.match(script, /ollama\/nemotron-3-nano:30b/);
     assert.match(script, /^exit$/m);
   });

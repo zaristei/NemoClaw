@@ -80,18 +80,18 @@ function registeredProviderForConfig(onboardCfg, providerCredentialEnv) {
     switch (onboardCfg?.endpointType) {
         case "ollama":
             return {
-                id: "ollama-local",
+                id: "ollama",
                 label: "Local Ollama",
-                aliases: ["ollama"],
+                aliases: ["ollama-local"],
                 envVars: [providerCredentialEnv],
                 models: { chat: activeModelEntries(onboardCfg) },
                 auth: [{ type: "bearer", envVar: providerCredentialEnv, headerName: "Authorization", label: authLabel }],
             };
         case "vllm":
             return {
-                id: "vllm-local",
+                id: "vllm",
                 label: "Local vLLM",
-                aliases: ["vllm"],
+                aliases: ["vllm-local"],
                 envVars: [providerCredentialEnv],
                 models: { chat: activeModelEntries(onboardCfg) },
                 auth: [{ type: "bearer", envVar: providerCredentialEnv, headerName: "Authorization", label: authLabel }],

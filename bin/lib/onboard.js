@@ -63,14 +63,40 @@ function shellQuote(value) {
 }
 
 function buildSandboxConfigSyncScript(selectionConfig) {
-  const primaryModel = getOpenClawPrimaryModel(
+  const providerType =
     selectionConfig.endpointType === "ollama"
       ? "ollama-local"
       : selectionConfig.endpointType === "vllm"
         ? "vllm-local"
-        : "nvidia-nim",
-    selectionConfig.model,
-  );
+        : "nvidia-nim";
+  const primaryModel = getOpenClawPrimaryModel(providerType, selectionConfig.model);
+  const providerKey =
+    selectionConfig.endpointType === "ollama"
+      ? "ollama"
+      : selectionConfig.endpointType === "vllm"
+        ? "vllm"
+        : "nvidia";
+  const providerConfig = {
+    baseUrl: selectionConfig.endpointUrl,
+    apiKey:
+      selectionConfig.endpointType === "ollama"
+        ? "ollama-local"
+        : selectionConfig.endpointType === "vllm"
+          ? "vllm-local"
+          : "openshell-managed",
+    api: "openai-completions",
+    models: [
+      {
+        id: selectionConfig.model,
+        name: selectionConfig.model,
+        reasoning: false,
+        input: ["text"],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 131072,
+        maxTokens: 4096,
+      },
+    ],
+  };
   return `
 set -euo pipefail
 mkdir -p ~/.nemoclaw ~/.openclaw
@@ -88,6 +114,10 @@ if os.path.exists(cfg_path):
         cfg = json.load(f)
 
 cfg.setdefault('agents', {}).setdefault('defaults', {}).setdefault('model', {})['primary'] = ${JSON.stringify(primaryModel)}
+models_cfg = cfg.setdefault('models', {})
+models_cfg.setdefault('mode', 'merge')
+providers_cfg = models_cfg.setdefault('providers', {})
+providers_cfg[${JSON.stringify(providerKey)}] = ${JSON.stringify(providerConfig)}
 
 with open(cfg_path, 'w') as f:
     json.dump(cfg, f, indent=2)

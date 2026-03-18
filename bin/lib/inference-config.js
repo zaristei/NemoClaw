@@ -32,7 +32,7 @@ function getProviderSelectionConfig(provider, model) {
         ncpPartner: null,
         model: model || DEFAULT_OLLAMA_MODEL,
         profile: "ollama",
-        credentialEnv: "OPENAI_API_KEY",
+        credentialEnv: "OLLAMA_API_KEY",
       };
     default:
       return null;
