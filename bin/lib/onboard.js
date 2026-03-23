@@ -11,6 +11,7 @@ const path = require("path");
 const { spawn, spawnSync } = require("child_process");
 const { ROOT, SCRIPTS, run, runCapture, shellQuote } = require("./runner");
 const {
+  HOST_GATEWAY_URL,
   getDefaultOllamaModel,
   getLocalProviderBaseUrl,
   getOllamaModelOptions,
@@ -273,6 +274,29 @@ function installOpenshell() {
 
 function sleep(seconds) {
   require("child_process").spawnSync("sleep", [String(seconds)]);
+}
+
+// ── Ollama auth proxy ─────────────────────────────────────────────
+// Ollama has no built-in auth and must not listen on 0.0.0.0 (PSIRT
+// bug 6002780). We bind Ollama to 127.0.0.1 and front it with a
+// token-authenticated proxy on 0.0.0.0:11435 so the OpenShell gateway
+// (running in a container) can still reach it.
+
+let ollamaProxyToken = null;
+
+function startOllamaAuthProxy() {
+  const crypto = require("crypto");
+  ollamaProxyToken = crypto.randomBytes(24).toString("hex");
+  run(
+    `OLLAMA_PROXY_TOKEN=${shellQuote(ollamaProxyToken)} ` +
+    `node "${SCRIPTS}/ollama-auth-proxy.js" > /dev/null 2>&1 &`,
+    { ignoreError: true },
+  );
+  sleep(1);
+}
+
+function getOllamaProxyToken() {
+  return ollamaProxyToken;
 }
 
 function waitForSandboxReady(sandboxName, attempts = 10, delaySeconds = 2) {
@@ -746,11 +770,12 @@ async function setupNim(sandboxName, gpu) {
       }
     } else if (selected.key === "ollama") {
       if (!ollamaRunning) {
-        console.log("  Starting Ollama...");
-        run("OLLAMA_HOST=0.0.0.0:11434 ollama serve > /dev/null 2>&1 &", { ignoreError: true });
+        console.log("  Starting Ollama (localhost only)...");
+        run("OLLAMA_HOST=127.0.0.1:11434 ollama serve > /dev/null 2>&1 &", { ignoreError: true });
         sleep(2);
       }
-      console.log("  ✓ Using Ollama on localhost:11434");
+      startOllamaAuthProxy();
+      console.log("  ✓ Using Ollama on localhost:11434 (proxy on :11435)");
       provider = "ollama-local";
       if (isNonInteractive()) {
         model = requestedModel || getDefaultOllamaModel(runCapture);
@@ -760,10 +785,11 @@ async function setupNim(sandboxName, gpu) {
     } else if (selected.key === "install-ollama") {
       console.log("  Installing Ollama via Homebrew...");
       run("brew install ollama", { ignoreError: true });
-      console.log("  Starting Ollama...");
-      run("OLLAMA_HOST=0.0.0.0:11434 ollama serve > /dev/null 2>&1 &", { ignoreError: true });
-        sleep(2);
-      console.log("  ✓ Using Ollama on localhost:11434");
+      console.log("  Starting Ollama (localhost only)...");
+      run("OLLAMA_HOST=127.0.0.1:11434 ollama serve > /dev/null 2>&1 &", { ignoreError: true });
+      sleep(2);
+      startOllamaAuthProxy();
+      console.log("  ✓ Using Ollama on localhost:11434 (proxy on :11435)");
       provider = "ollama-local";
       if (isNonInteractive()) {
         model = requestedModel || getDefaultOllamaModel(runCapture);
@@ -842,13 +868,16 @@ async function setupInference(sandboxName, model, provider) {
       console.error("  On macOS, local inference also depends on OpenShell host routing support.");
       process.exit(1);
     }
-    const baseUrl = getLocalProviderBaseUrl(provider);
+    // Use the auth proxy URL (port 11435) instead of direct Ollama (11434).
+    // The proxy validates a per-instance Bearer token before forwarding.
+    const proxyToken = getOllamaProxyToken() || "ollama";
+    const proxyBaseUrl = `${HOST_GATEWAY_URL}:11435/v1`;
     run(
       `openshell provider create --name ollama-local --type openai ` +
-      `--credential "OPENAI_API_KEY=ollama" ` +
-      `--config "OPENAI_BASE_URL=${baseUrl}" 2>&1 || ` +
-      `openshell provider update ollama-local --credential "OPENAI_API_KEY=ollama" ` +
-      `--config "OPENAI_BASE_URL=${baseUrl}" 2>&1 || true`,
+      `--credential ${shellQuote("OPENAI_API_KEY=" + proxyToken)} ` +
+      `--config "OPENAI_BASE_URL=${proxyBaseUrl}" 2>&1 || ` +
+      `openshell provider update ollama-local --credential ${shellQuote("OPENAI_API_KEY=" + proxyToken)} ` +
+      `--config "OPENAI_BASE_URL=${proxyBaseUrl}" 2>&1 || true`,
       { ignoreError: true }
     );
     run(

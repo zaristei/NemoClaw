@@ -12,7 +12,8 @@ function getLocalProviderBaseUrl(provider) {
     case "vllm-local":
       return `${HOST_GATEWAY_URL}:8000/v1`;
     case "ollama-local":
-      return `${HOST_GATEWAY_URL}:11434/v1`;
+      // Route through the auth proxy (11435), not Ollama directly (11434)
+      return `${HOST_GATEWAY_URL}:11435/v1`;
     default:
       return null;
   }
@@ -34,7 +35,9 @@ function getLocalProviderContainerReachabilityCheck(provider) {
     case "vllm-local":
       return `docker run --rm --add-host host.openshell.internal:host-gateway ${CONTAINER_REACHABILITY_IMAGE} -sf http://host.openshell.internal:8000/v1/models 2>/dev/null`;
     case "ollama-local":
-      return `docker run --rm --add-host host.openshell.internal:host-gateway ${CONTAINER_REACHABILITY_IMAGE} -sf http://host.openshell.internal:11434/api/tags 2>/dev/null`;
+      // Check the auth proxy port (11435), not Ollama directly (11434).
+      // The proxy is on 0.0.0.0 and reachable from containers; Ollama is on 127.0.0.1.
+      return `docker run --rm --add-host host.openshell.internal:host-gateway ${CONTAINER_REACHABILITY_IMAGE} -sf http://host.openshell.internal:11435/api/tags 2>/dev/null`;
     default:
       return null;
   }
@@ -85,7 +88,7 @@ function validateLocalProvider(provider, runCapture) {
       return {
         ok: false,
         message:
-          "Local Ollama is responding on localhost, but containers cannot reach http://host.openshell.internal:11434. Ensure Ollama listens on 0.0.0.0:11434 instead of 127.0.0.1 so sandboxes can reach it.",
+          "Local Ollama is responding on localhost, but containers cannot reach http://host.openshell.internal:11435. Ensure the Ollama auth proxy (scripts/ollama-auth-proxy.js) is running.",
       };
     default:
       return { ok: false, message: "The selected local inference provider is unavailable from containers." };

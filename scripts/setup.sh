@@ -153,17 +153,21 @@ if [ "$(uname -s)" = "Darwin" ]; then
     brew install ollama 2>/dev/null || warn "Ollama install failed (brew required). Install manually: https://ollama.com"
   fi
   if command -v ollama > /dev/null 2>&1; then
-    # Start Ollama service if not running
+    # Start Ollama on localhost only (not 0.0.0.0 — no auth, PSIRT bug 6002780)
     if ! check_local_provider_health "ollama-local"; then
-      info "Starting Ollama service..."
-      OLLAMA_HOST=0.0.0.0:11434 ollama serve > /dev/null 2>&1 &
+      info "Starting Ollama service (localhost only)..."
+      OLLAMA_HOST=127.0.0.1:11434 ollama serve > /dev/null 2>&1 &
       sleep 2
     fi
-    OLLAMA_LOCAL_BASE_URL="$(get_local_provider_base_url "ollama-local")"
+    # Start auth proxy so containers can reach Ollama through a token gate
+    OLLAMA_PROXY_TOKEN="$(head -c 24 /dev/urandom | xxd -p)"
+    OLLAMA_PROXY_TOKEN="$OLLAMA_PROXY_TOKEN" node "$SCRIPT_DIR/ollama-auth-proxy.js" > /dev/null 2>&1 &
+    sleep 1
+    OLLAMA_LOCAL_BASE_URL="http://host.openshell.internal:11435/v1"
     upsert_provider \
       "ollama-local" \
       "openai" \
-      "OPENAI_API_KEY=ollama" \
+      "OPENAI_API_KEY=$OLLAMA_PROXY_TOKEN" \
       "OPENAI_BASE_URL=$OLLAMA_LOCAL_BASE_URL"
   fi
 fi

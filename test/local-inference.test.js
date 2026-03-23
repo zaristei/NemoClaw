@@ -21,17 +21,17 @@ describe("local inference helpers", () => {
     expect(getLocalProviderBaseUrl("vllm-local")).toBe("http://host.openshell.internal:8000/v1");
   });
 
-  it("returns the expected base URL for ollama-local", () => {
-    expect(getLocalProviderBaseUrl("ollama-local")).toBe("http://host.openshell.internal:11434/v1");
+  it("returns the expected base URL for ollama-local (auth proxy port)", () => {
+    expect(getLocalProviderBaseUrl("ollama-local")).toBe("http://host.openshell.internal:11435/v1");
   });
 
   it("returns the expected health check command for ollama-local", () => {
     expect(getLocalProviderHealthCheck("ollama-local")).toBe("curl -sf http://localhost:11434/api/tags 2>/dev/null");
   });
 
-  it("returns the expected container reachability command for ollama-local", () => {
+  it("returns the expected container reachability command for ollama-local (auth proxy port)", () => {
     expect(getLocalProviderContainerReachabilityCheck("ollama-local")).toBe(
-      `docker run --rm --add-host host.openshell.internal:host-gateway ${CONTAINER_REACHABILITY_IMAGE} -sf http://host.openshell.internal:11434/api/tags 2>/dev/null`
+      `docker run --rm --add-host host.openshell.internal:host-gateway ${CONTAINER_REACHABILITY_IMAGE} -sf http://host.openshell.internal:11435/api/tags 2>/dev/null`
     );
   });
 
@@ -58,8 +58,8 @@ describe("local inference helpers", () => {
       return callCount === 1 ? '{"models":[]}' : "";
     });
     expect(result.ok).toBe(false);
-    expect(result.message).toMatch(/host\.openshell\.internal:11434/);
-    expect(result.message).toMatch(/0\.0\.0\.0:11434/);
+    expect(result.message).toMatch(/host\.openshell\.internal:11435/);
+    expect(result.message).toMatch(/ollama-auth-proxy/);
   });
 
   it("returns a clear error when vllm-local is unavailable", () => {
