@@ -173,8 +173,12 @@ async function deploy(instanceName) {
   }
 
   try {
-    // Pin the host key now that the VM is reachable
-    const hostKeys = execFileSync("ssh-keyscan", ["-H", name], { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] });
+    // Pin the host key now that the VM is reachable.
+    // Resolve the real hostname from SSH config — brev aliases aren't DNS-resolvable,
+    // so ssh-keyscan needs the actual IP (e.g., "my-test-box" → "34.45.157.55").
+    const sshConfigOut = execFileSync("ssh", ["-G", name], { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] });
+    const realHost = sshConfigOut.split("\n").find((l) => l.startsWith("hostname "))?.split(" ")[1] || name;
+    const hostKeys = execFileSync("ssh-keyscan", ["-H", realHost], { encoding: "utf-8", stdio: ["ignore", "pipe", "ignore"] });
     fs.writeFileSync(knownHostsFile, hostKeys, { mode: 0o600 });
 
     const sshOpts = `-o UserKnownHostsFile=${shellQuote(knownHostsFile)} -o StrictHostKeyChecking=yes -o LogLevel=ERROR`;
