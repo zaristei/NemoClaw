@@ -336,6 +336,10 @@ function sleep(seconds) {
   require("child_process").spawnSync("sleep", [String(seconds)]);
 }
 
+function supportsLmstudioSidecar() {
+  return process.platform === "linux" && process.arch !== "arm64";
+}
+
 function waitForSandboxReady(sandboxName, attempts = 10, delaySeconds = 2) {
   for (let i = 0; i < attempts; i += 1) {
     const exists = runCapture(`openshell sandbox get "${sandboxName}" 2>/dev/null`, { ignoreError: true });
@@ -723,6 +727,7 @@ async function selectInferenceProvider(sandboxName, gpu) {
 
   // Detect local inference options
   const useSidecar = process.platform === "linux"; // Linux: Docker sidecar avoids host-networking issues
+  const lmstudioSidecarSupported = supportsLmstudioSidecar();
   const hasOllama = !useSidecar && !!runCapture("command -v ollama", { ignoreError: true });
   const ollamaRunning = !!runCapture("curl -sf http://localhost:11434/api/tags 2>/dev/null", { ignoreError: true });
   const lmstudioRunning = !!runCapture("curl -sf http://localhost:1234/v1/models 2>/dev/null", { ignoreError: true });
@@ -737,7 +742,9 @@ async function selectInferenceProvider(sandboxName, gpu) {
   // Configurable via NEMOCLAW_LOCAL_VRAM_THRESHOLD_MB.
   const localVramThreshold = parseInt(process.env.NEMOCLAW_LOCAL_VRAM_THRESHOLD_MB || "9600", 10);
   const hasRtxGpu = gpu && gpu.type === "nvidia" && gpu.perGpuMB >= localVramThreshold;
-  const preferLocal = EXPERIMENTAL && hasRtxGpu;
+  // On Linux with a capable GPU, default to the Docker sidecar (no API key needed).
+  // NIM and vLLM still require EXPERIMENTAL, but Ollama/LM Studio sidecars do not.
+  const preferLocal = hasRtxGpu && (EXPERIMENTAL || useSidecar);
 
   // Build status labels for local providers
   const ollamaStatus = useSidecar
@@ -755,7 +762,9 @@ async function selectInferenceProvider(sandboxName, gpu) {
     // Local-first: show local providers before cloud
     if (useSidecar) {
       options.push({ key: "ollama-sidecar", label: "Ollama (Docker sidecar) — no install needed" });
-      options.push({ key: "lmstudio-sidecar", label: "LM Studio (Docker sidecar) — no install needed" });
+      if (lmstudioSidecarSupported) {
+        options.push({ key: "lmstudio-sidecar", label: "LM Studio (Docker sidecar) — no install needed" });
+      }
     } else {
       options.push({
         key: "ollama",
@@ -776,7 +785,9 @@ async function selectInferenceProvider(sandboxName, gpu) {
     });
     if (useSidecar) {
       options.push({ key: "ollama-sidecar", label: "Ollama (Docker sidecar) — no install needed" });
-      options.push({ key: "lmstudio-sidecar", label: "LM Studio (Docker sidecar) — no install needed" });
+      if (lmstudioSidecarSupported) {
+        options.push({ key: "lmstudio-sidecar", label: "LM Studio (Docker sidecar) — no install needed" });
+      }
     } else {
       if (hasOllama || ollamaRunning || process.platform === "linux" || process.platform === "darwin") {
         options.push({
@@ -833,11 +844,12 @@ async function selectInferenceProvider(sandboxName, gpu) {
       });
       console.log("");
 
-      const defaultKey = preferLocal ? "ollama" : "cloud";
-      const defaultIdx = options.findIndex((o) => o.key === defaultKey) + 1;
+      const defaultKey = preferLocal ? (useSidecar ? "ollama-sidecar" : "ollama") : "cloud";
+      const defaultOption = options.find((o) => o.key === defaultKey) || options[0];
+      const defaultIdx = options.indexOf(defaultOption) + 1;
       const choice = await prompt(`  Choose [${defaultIdx}]: `);
       const idx = parseInt(choice || String(defaultIdx), 10) - 1;
-      selected = options[idx] || options[defaultIdx - 1];
+      selected = options[idx] || defaultOption;
     }
 
     if (selected.key === "nim") {
@@ -909,7 +921,8 @@ async function selectInferenceProvider(sandboxName, gpu) {
         // Non-interactive: use NEMOCLAW_MODEL or first installed model or default
         const installed = sidecar.listModels("default");
         const starters = sidecar.starterModels || [];
-        downloadModel = requestedModel || (installed.length > 0 ? installed[0] : starters.length > 0 ? starters[0].model : DEFAULT_OLLAMA_MODEL);
+        const fallbackModel = providerKey === "lmstudio-k3s" ? DEFAULT_LMSTUDIO_MODEL : DEFAULT_OLLAMA_MODEL;
+        downloadModel = requestedModel || (installed.length > 0 ? installed[0] : starters.length > 0 ? starters[0].model : fallbackModel);
       } else {
         downloadModel = await promptSidecarModel(providerKey);
       }
@@ -1426,4 +1439,5 @@ module.exports = {
   isSandboxReady,
   onboard,
   selectInferenceProvider,
+  supportsLmstudioSidecar,
 };
