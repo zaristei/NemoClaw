@@ -79,7 +79,7 @@ function captureOpenshell(args, opts = {}) {
   });
   return {
     status: result.status ?? 1,
-    output: `${result.stdout || ""}${result.stderr || ""}`.trim(),
+    output: `${result.stdout || ""}${opts.ignoreError ? "" : result.stderr || ""}`.trim(),
   };
 }
 
@@ -94,7 +94,7 @@ function hasNamedGateway(output = "") {
 
 function getNamedGatewayLifecycleState() {
   const status = captureOpenshell(["status"]);
-  const gatewayInfo = captureOpenshell(["gateway", "info", "-g", "nemoclaw"], { ignoreError: true });
+  const gatewayInfo = captureOpenshell(["gateway", "info", "-g", "nemoclaw"]);
   const cleanStatus = stripAnsi(status.output);
   const connected = /Connected/i.test(cleanStatus);
   const named = hasNamedGateway(gatewayInfo.output);
@@ -178,7 +178,7 @@ function printGatewayLifecycleHint(output = "", sandboxName = "", writer = conso
     writer("  Retry `openshell gateway start --name nemoclaw`; if it stays in this state, rebuild the gateway before expecting existing sandboxes to reconnect.");
     return;
   }
-  if (/handshake verification failed/i.test(output)) {
+  if (/handshake verification failed/i.test(cleanOutput)) {
     writer("  This looks like gateway identity drift after restart.");
     writer("  Existing sandboxes may still be recorded locally, but the current gateway no longer trusts their prior connection state.");
     writer("  Try re-establishing the NemoClaw gateway/runtime first. If the sandbox is still unreachable, recreate just that sandbox with `nemoclaw onboard`.");
@@ -566,7 +566,7 @@ async function sandboxConnect(sandboxName) {
 async function sandboxStatus(sandboxName) {
   const sb = registry.getSandbox(sandboxName);
   const live = parseGatewayInference(
-    _runCapture("openshell inference get 2>/dev/null", { ignoreError: true })
+    captureOpenshell(["inference", "get"], { ignoreError: true }).output
   );
   if (sb) {
     console.log("");
@@ -574,7 +574,7 @@ async function sandboxStatus(sandboxName) {
     console.log(`    Model:    ${(live && live.model) || sb.model || "unknown"}`);
     console.log(`    Provider: ${(live && live.provider) || sb.provider || "unknown"}`);
     console.log(`    GPU:      ${sb.gpuEnabled ? "yes" : "no"}`);
-      console.log(`    Policies: ${(sb.policies || []).join(", ") || "none"}`);
+    console.log(`    Policies: ${(sb.policies || []).join(", ") || "none"}`);
   }
 
   const lookup = await getReconciledSandboxGatewayState(sandboxName);
