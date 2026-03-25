@@ -243,15 +243,15 @@ if [ ${#NEMOCLAW_CMD[@]} -gt 0 ]; then
   exec gosu sandbox "${NEMOCLAW_CMD[@]}"
 fi
 
-# SECURITY: Protect gateway log from sandbox user tampering
-touch /tmp/gateway.log
-chown gateway:gateway /tmp/gateway.log
-chmod 600 /tmp/gateway.log
+# SECURITY: Protect gateway log from sandbox user tampering.
+# Root owns the files (mode 620: owner rw, group w) so the root entrypoint
+# can redirect stdout, while the target user (via group) can also write.
+# Without cap_dac_override (dropped at startup), root cannot open files
+# owned by other users, so root must remain the owner.
+install -m 620 -g gateway /dev/null /tmp/gateway.log
 
 # Separate log for auto-pair so sandbox user can write to it
-touch /tmp/auto-pair.log
-chown sandbox:sandbox /tmp/auto-pair.log
-chmod 600 /tmp/auto-pair.log
+install -m 620 -g sandbox /dev/null /tmp/auto-pair.log
 
 # Verify ALL symlinks in .openclaw point to expected .openclaw-data targets.
 # Dynamic scan so future OpenClaw symlinks are covered automatically.
