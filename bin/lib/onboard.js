@@ -710,8 +710,10 @@ function writeConfigOverridesFromPolicy(sandboxName) {
   if (Object.keys(overrides).length === 0) return;
 
   const json = JSON.stringify(overrides, null, 2);
-  const script = `cat > /sandbox/.openclaw-data/config-overrides.json5 <<'EOF_OVERRIDES'\n${json}\nEOF_OVERRIDES`;
-  run(`openshell exec "${sandboxName}" -- bash -c ${shellQuote(script)}`, { ignoreError: true });
+  const script = `cat > /sandbox/.openclaw-data/config-overrides.json5 <<'EOF_OVERRIDES'\n${json}\nEOF_OVERRIDES\nexit\n`;
+  const scriptFile = writeSandboxConfigSyncFile(script);
+  run(`openshell sandbox connect "${sandboxName}" < ${shellQuote(scriptFile)}`, { ignoreError: true });
+  try { fs.unlinkSync(scriptFile); } catch {}
   console.log("  ✓ Config overrides file written to sandbox");
 }
 

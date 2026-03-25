@@ -56,6 +56,8 @@ network_policies:
         port: 443
         protocol: rest
         enforcement: enforce
+        rules:
+          - allow: { method: "*", path: "/**" }
       - host: statsig.anthropic.com
         port: 443
       - host: sentry.io
@@ -70,10 +72,14 @@ network_policies:
         port: 443
         protocol: rest
         enforcement: enforce
+        rules:
+          - allow: { method: "*", path: "/**" }
       - host: inference-api.nvidia.com
         port: 443
         protocol: rest
         enforcement: enforce
+        rules:
+          - allow: { method: "*", path: "/**" }
     binaries:
       - { path: /usr/local/bin/claude }
       - { path: /usr/local/bin/openclaw }

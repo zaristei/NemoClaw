@@ -38,16 +38,35 @@ function loadAllowList() {
 }
 
 /**
+ * Run a script inside the sandbox via `sandbox connect` with stdin piping.
+ * This is the same mechanism onboard uses — no `exec` command needed.
+ */
+function sandboxRun(sandboxName, script) {
+  const os = require("os");
+  const fs = require("fs");
+  const tmpFile = path.join(os.tmpdir(), `nemoclaw-cfg-${Date.now()}.sh`);
+  fs.writeFileSync(tmpFile, script + "\nexit\n", { mode: 0o600 });
+  try {
+    return runCapture(
+      `openshell sandbox connect ${shellQuote(sandboxName)} < ${shellQuote(tmpFile)} 2>&1`,
+      { ignoreError: true }
+    );
+  } finally {
+    fs.unlinkSync(tmpFile);
+  }
+}
+
+/**
  * Read the current overrides file from inside the sandbox.
  */
 function readOverrides(sandboxName) {
-  const raw = runCapture(
-    `openshell exec "${sandboxName}" -- cat ${OVERRIDES_PATH} 2>/dev/null`,
-    { ignoreError: true }
-  );
+  const raw = sandboxRun(sandboxName, `cat ${OVERRIDES_PATH} 2>/dev/null`);
   if (!raw || raw.trim() === "") return {};
+  // sandbox connect may include shell prompt noise — extract the JSON
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) return {};
   try {
-    return JSON.parse(raw);
+    return JSON.parse(jsonMatch[0]);
   } catch {
     return {};
   }
@@ -59,11 +78,7 @@ function readOverrides(sandboxName) {
 function writeOverrides(sandboxName, overrides) {
   const json = JSON.stringify(overrides, null, 2);
   const script = `cat > ${OVERRIDES_PATH} <<'EOF_OV'\n${json}\nEOF_OV`;
-  const result = runCapture(
-    `openshell exec "${sandboxName}" -- bash -c ${shellQuote(script)} 2>&1`,
-    { ignoreError: true }
-  );
-  return result;
+  return sandboxRun(sandboxName, script);
 }
 
 /**
