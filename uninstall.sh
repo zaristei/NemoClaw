@@ -232,7 +232,7 @@ remove_file_with_optional_sudo() {
     return 0
   fi
 
-  if [ -w "$path" ] || [ -w "$(dirname "$path")" ]; then
+  if [ -w "$(dirname "$path")" ]; then
     rm -f "$path"
   elif [ "${NEMOCLAW_NON_INTERACTIVE:-}" = "1" ] || [ ! -t 0 ]; then
     warn "Skipping privileged removal of $path in non-interactive mode."
@@ -371,34 +371,6 @@ remove_related_docker_containers() {
   if [ "$removed_any" = false ]; then
     warn "No related Docker containers were removed"
   fi
-}
-
-remove_related_docker_volumes() {
-  if ! command -v docker >/dev/null 2>&1; then
-    warn "docker not found; skipping Docker volume cleanup."
-    return 0
-  fi
-
-  if ! docker info >/dev/null 2>&1; then
-    warn "docker is not running; skipping Docker volume cleanup."
-    return 0
-  fi
-
-  local volumes
-  volumes=$(docker volume ls -q --filter "name=openshell-cluster" 2>/dev/null)
-  if [ -z "$volumes" ]; then
-    info "No OpenShell Docker volumes found"
-    return 0
-  fi
-
-  local vol
-  for vol in $volumes; do
-    if docker volume rm "$vol" >/dev/null 2>&1; then
-      info "Removed Docker volume $vol"
-    else
-      warn "Failed to remove Docker volume $vol"
-    fi
-  done
 }
 
 remove_related_docker_images() {
@@ -566,15 +538,6 @@ main() {
 
   step 4 "Docker resources"
   spin "Removing Docker resources..." remove_docker_resources
-
-  info "Removing related Docker containers..."
-  remove_related_docker_containers
-
-  info "Removing related Docker volumes..."
-  remove_related_docker_volumes
-
-  info "Removing related Docker images..."
-  remove_related_docker_images
 
   step 5 "Ollama models"
   remove_optional_ollama_models
