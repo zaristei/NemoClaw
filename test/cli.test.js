@@ -3,16 +3,22 @@
 
 import { describe, it, expect } from "vitest";
 import { execSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 const CLI = path.join(import.meta.dirname, "..", "bin", "nemoclaw.js");
 
 function run(args) {
+  return runWithEnv(args);
+}
+
+function runWithEnv(args, env = {}) {
   try {
     const out = execSync(`node "${CLI}" ${args}`, {
       encoding: "utf-8",
       timeout: 10000,
-      env: { ...process.env, HOME: "/tmp/nemoclaw-cli-test-" + Date.now() },
+      env: { ...process.env, HOME: "/tmp/nemoclaw-cli-test-" + Date.now(), ...env },
     });
     return { code: 0, out };
   } catch (err) {
@@ -89,5 +95,97 @@ describe("CLI dispatch", () => {
     expect(r.code).toBe(0);
     expect(r.out.includes("Troubleshooting")).toBeTruthy();
     expect(r.out.includes("nemoclaw debug")).toBeTruthy();
+  });
+
+  it("removes stale registry entries when connect targets a missing live sandbox", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "nemoclaw-cli-stale-connect-"));
+    const localBin = path.join(home, "bin");
+    const registryDir = path.join(home, ".nemoclaw");
+    fs.mkdirSync(localBin, { recursive: true });
+    fs.mkdirSync(registryDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(registryDir, "sandboxes.json"),
+      JSON.stringify({
+        sandboxes: {
+          alpha: {
+            name: "alpha",
+            model: "test-model",
+            provider: "nvidia-prod",
+            gpuEnabled: false,
+            policies: [],
+          },
+        },
+        defaultSandbox: "alpha",
+      }),
+      { mode: 0o600 }
+    );
+    fs.writeFileSync(
+      path.join(localBin, "openshell"),
+      [
+        "#!/usr/bin/env bash",
+        "if [ \"$1\" = \"sandbox\" ] && [ \"$2\" = \"get\" ] && [ \"$3\" = \"alpha\" ]; then",
+        "  echo 'Error: status: NotFound, message: \"sandbox not found\"' >&2",
+        "  exit 1",
+        "fi",
+        "exit 0",
+      ].join("\n"),
+      { mode: 0o755 }
+    );
+
+    const r = runWithEnv("alpha connect", {
+      HOME: home,
+      PATH: `${localBin}:${process.env.PATH || ""}`,
+    });
+
+    expect(r.code).toBe(1);
+    expect(r.out.includes("Removed stale local registry entry")).toBeTruthy();
+    const saved = JSON.parse(fs.readFileSync(path.join(registryDir, "sandboxes.json"), "utf8"));
+    expect(saved.sandboxes.alpha).toBeUndefined();
+  });
+
+  it("keeps registry entries when status hits a gateway-level transport error", () => {
+    const home = fs.mkdtempSync(path.join(os.tmpdir(), "nemoclaw-cli-gateway-error-"));
+    const localBin = path.join(home, "bin");
+    const registryDir = path.join(home, ".nemoclaw");
+    fs.mkdirSync(localBin, { recursive: true });
+    fs.mkdirSync(registryDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(registryDir, "sandboxes.json"),
+      JSON.stringify({
+        sandboxes: {
+          alpha: {
+            name: "alpha",
+            model: "test-model",
+            provider: "nvidia-prod",
+            gpuEnabled: false,
+            policies: [],
+          },
+        },
+        defaultSandbox: "alpha",
+      }),
+      { mode: 0o600 }
+    );
+    fs.writeFileSync(
+      path.join(localBin, "openshell"),
+      [
+        "#!/usr/bin/env bash",
+        "if [ \"$1\" = \"sandbox\" ] && [ \"$2\" = \"get\" ] && [ \"$3\" = \"alpha\" ]; then",
+        "  echo 'Error: transport error: handshake verification failed' >&2",
+        "  exit 1",
+        "fi",
+        "exit 0",
+      ].join("\n"),
+      { mode: 0o755 }
+    );
+
+    const r = runWithEnv("alpha status", {
+      HOME: home,
+      PATH: `${localBin}:${process.env.PATH || ""}`,
+    });
+
+    expect(r.code).toBe(0);
+    expect(r.out.includes("Could not verify sandbox 'alpha'")).toBeTruthy();
+    const saved = JSON.parse(fs.readFileSync(path.join(registryDir, "sandboxes.json"), "utf8"));
+    expect(saved.sandboxes.alpha).toBeTruthy();
   });
 });

@@ -185,6 +185,11 @@ function hasStaleGateway(gwInfoOutput) {
   return typeof gwInfoOutput === "string" && gwInfoOutput.length > 0 && gwInfoOutput.includes(GATEWAY_NAME);
 }
 
+function isGatewayHealthy(statusOutput = "", gwInfoOutput = "") {
+  const connected = typeof statusOutput === "string" && statusOutput.includes("Connected");
+  return connected && hasStaleGateway(gwInfoOutput);
+}
+
 function streamSandboxCreate(command, env = process.env, options = {}) {
   const child = spawn("bash", ["-lc", command], {
     cwd: ROOT,
@@ -1237,8 +1242,16 @@ async function preflight() {
   // A previous onboard run may have left the gateway container and port
   // forward running.  If a NemoClaw-owned gateway is still present, tear
   // it down so the port check below doesn't fail on our own leftovers.
+  const gatewayStatus = runCaptureOpenshell(["status"], { ignoreError: true });
   const gwInfo = runCaptureOpenshell(["gateway", "info", "-g", GATEWAY_NAME], { ignoreError: true });
-  if (hasStaleGateway(gwInfo)) {
+  const healthyGateway = isGatewayHealthy(gatewayStatus, gwInfo);
+  if (healthyGateway) {
+    console.log("  Reusing existing NemoClaw gateway...");
+    runOpenshell(["forward", "stop", "18789"], { ignoreError: true });
+    runOpenshell(["gateway", "select", GATEWAY_NAME], { ignoreError: true });
+    process.env.OPENSHELL_GATEWAY = GATEWAY_NAME;
+    console.log("  ✓ Existing gateway selected");
+  } else if (hasStaleGateway(gwInfo)) {
     console.log("  Cleaning up previous NemoClaw session...");
     runOpenshell(["forward", "stop", "18789"], { ignoreError: true });
     runOpenshell(["gateway", "destroy", "-g", GATEWAY_NAME], { ignoreError: true });
@@ -1251,6 +1264,10 @@ async function preflight() {
     { port: 18789, label: "NemoClaw dashboard" },
   ];
   for (const { port, label } of requiredPorts) {
+    if (port === 8080 && healthyGateway) {
+      console.log(`  ✓ Port ${port} already in use by active NemoClaw gateway (${label})`);
+      continue;
+    }
     const portCheck = await checkPortAvailable(port);
     if (!portCheck.ok) {
       console.error("");
@@ -1299,8 +1316,18 @@ async function preflight() {
 async function startGateway(_gpu) {
   step(3, 7, "Starting OpenShell gateway");
 
-  // Destroy old gateway
-  runOpenshell(["gateway", "destroy", "-g", GATEWAY_NAME], { ignoreError: true });
+  const gatewayStatus = runCaptureOpenshell(["status"], { ignoreError: true });
+  const gwInfo = runCaptureOpenshell(["gateway", "info", "-g", GATEWAY_NAME], { ignoreError: true });
+  if (isGatewayHealthy(gatewayStatus, gwInfo)) {
+    console.log("  ✓ Reusing existing gateway");
+    runOpenshell(["gateway", "select", GATEWAY_NAME], { ignoreError: true });
+    process.env.OPENSHELL_GATEWAY = GATEWAY_NAME;
+    return;
+  }
+
+  if (hasStaleGateway(gwInfo)) {
+    runOpenshell(["gateway", "destroy", "-g", GATEWAY_NAME], { ignoreError: true });
+  }
 
   const gwArgs = ["--name", GATEWAY_NAME];
   // Do NOT pass --gpu here. On DGX Spark (and most GPU hosts), inference is
@@ -2204,12 +2231,15 @@ module.exports = {
   getInstalledOpenshellVersion,
   getStableGatewayImageRef,
   hasStaleGateway,
+  isGatewayHealthy,
   isSandboxReady,
   onboard,
+  preflight,
   pruneStaleSandboxEntry,
   runCaptureOpenshell,
   setupInference,
   setupNim,
+  startGateway,
   writeSandboxConfigSyncFile,
   patchStagedDockerfile,
 };

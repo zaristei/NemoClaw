@@ -21,6 +21,7 @@ const _RD = _useColor ? "\x1b[1;31m" : "";
 const YW = _useColor ? "\x1b[1;33m" : "";
 
 const { ROOT, SCRIPTS, run, runCapture: _runCapture, runInteractive, shellQuote, validateName } = require("./lib/runner");
+const { resolveOpenshell } = require("./lib/resolve-openshell");
 const {
   ensureApiKey,
   ensureGithubToken,
@@ -40,6 +41,72 @@ const GLOBAL_COMMANDS = new Set([
 ]);
 
 const REMOTE_UNINSTALL_URL = "https://raw.githubusercontent.com/NVIDIA/NemoClaw/refs/heads/main/uninstall.sh";
+let OPENSHELL_BIN = null;
+
+function getOpenshellBinary() {
+  if (!OPENSHELL_BIN) {
+    OPENSHELL_BIN = resolveOpenshell();
+  }
+  if (!OPENSHELL_BIN) {
+    console.error("openshell CLI not found. Install OpenShell before using sandbox commands.");
+    process.exit(1);
+  }
+  return OPENSHELL_BIN;
+}
+
+function runOpenshell(args, opts = {}) {
+  const result = spawnSync(getOpenshellBinary(), args, {
+    cwd: ROOT,
+    env: { ...process.env, ...opts.env },
+    encoding: "utf-8",
+    stdio: opts.stdio ?? "inherit",
+  });
+  if (result.status !== 0 && !opts.ignoreError) {
+    console.error(`  Command failed (exit ${result.status}): openshell ${args.join(" ")}`);
+    process.exit(result.status || 1);
+  }
+  return result;
+}
+
+function getSandboxGatewayState(sandboxName) {
+  const result = spawnSync(getOpenshellBinary(), ["sandbox", "get", sandboxName], {
+    cwd: ROOT,
+    env: process.env,
+    encoding: "utf-8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const output = `${result.stdout || ""}${result.stderr || ""}`.trim();
+  if (result.status === 0) {
+    return { state: "present", output };
+  }
+  if (/NotFound|sandbox not found/i.test(output)) {
+    return { state: "missing", output };
+  }
+  if (/transport error|Connection refused|handshake verification failed|Missing gateway auth token|device identity required/i.test(output)) {
+    return { state: "gateway_error", output };
+  }
+  return { state: "unknown_error", output };
+}
+
+function ensureLiveSandboxOrExit(sandboxName) {
+  const lookup = getSandboxGatewayState(sandboxName);
+  if (lookup.state === "present") {
+    return lookup;
+  }
+  if (lookup.state === "missing") {
+    registry.removeSandbox(sandboxName);
+    console.error(`  Sandbox '${sandboxName}' is not present in the live OpenShell gateway.`);
+    console.error("  Removed stale local registry entry.");
+    console.error("  Run `nemoclaw list` to confirm the remaining sandboxes, or `nemoclaw onboard` to create a new one.");
+    process.exit(1);
+  }
+  console.error(`  Unable to verify sandbox '${sandboxName}' against the live OpenShell gateway.`);
+  if (lookup.output) {
+    console.error(lookup.output);
+  }
+  console.error("  Check `openshell status` and the active gateway, then retry.");
+  process.exit(1);
+}
 
 function resolveUninstallScript() {
   const candidates = [
@@ -298,10 +365,15 @@ function listSandboxes() {
 // ── Sandbox-scoped actions ───────────────────────────────────────
 
 function sandboxConnect(sandboxName) {
-  const qn = shellQuote(sandboxName);
+  ensureLiveSandboxOrExit(sandboxName);
   // Ensure port forward is alive before connecting
-  run(`openshell forward start --background 18789 ${qn} 2>/dev/null || true`, { ignoreError: true });
-  runInteractive(`openshell sandbox connect ${qn}`);
+  runOpenshell(["forward", "start", "--background", "18789", sandboxName], { ignoreError: true });
+  const result = spawnSync(getOpenshellBinary(), ["sandbox", "connect", sandboxName], {
+    stdio: "inherit",
+    cwd: ROOT,
+    env: process.env,
+  });
+  exitWithSpawnResult(result);
 }
 
 function sandboxStatus(sandboxName) {
@@ -312,11 +384,25 @@ function sandboxStatus(sandboxName) {
     console.log(`    Model:    ${sb.model || "unknown"}`);
     console.log(`    Provider: ${sb.provider || "unknown"}`);
     console.log(`    GPU:      ${sb.gpuEnabled ? "yes" : "no"}`);
-    console.log(`    Policies: ${(sb.policies || []).join(", ") || "none"}`);
+      console.log(`    Policies: ${(sb.policies || []).join(", ") || "none"}`);
   }
 
-  // openshell info
-  run(`openshell sandbox get ${shellQuote(sandboxName)} 2>/dev/null || true`, { ignoreError: true });
+  const lookup = getSandboxGatewayState(sandboxName);
+  if (lookup.state === "present") {
+    console.log("");
+    console.log(lookup.output);
+  } else if (lookup.state === "missing") {
+    registry.removeSandbox(sandboxName);
+    console.log("");
+    console.log(`  Sandbox '${sandboxName}' is not present in the live OpenShell gateway.`);
+    console.log("  Removed stale local registry entry.");
+  } else {
+    console.log("");
+    console.log(`  Could not verify sandbox '${sandboxName}' against the live OpenShell gateway.`);
+    if (lookup.output) {
+      console.log(lookup.output);
+    }
+  }
 
   // NIM health
   const nimStat = sb && sb.nimContainer ? nim.nimStatusByName(sb.nimContainer) : nim.nimStatus(sandboxName);
@@ -328,8 +414,9 @@ function sandboxStatus(sandboxName) {
 }
 
 function sandboxLogs(sandboxName, follow) {
-  const followFlag = follow ? " --tail" : "";
-  run(`openshell logs ${shellQuote(sandboxName)}${followFlag}`);
+  const args = ["logs", sandboxName];
+  if (follow) args.push("--tail");
+  runOpenshell(args);
 }
 
 async function sandboxPolicyAdd(sandboxName) {
@@ -386,7 +473,7 @@ async function sandboxDestroy(sandboxName, args = []) {
   else nim.stopNimContainer(sandboxName);
 
   console.log(`  Deleting sandbox '${sandboxName}'...`);
-  run(`openshell sandbox delete ${shellQuote(sandboxName)} 2>/dev/null || true`, { ignoreError: true });
+  runOpenshell(["sandbox", "delete", sandboxName], { ignoreError: true });
 
   registry.removeSandbox(sandboxName);
   console.log(`  ${G}✓${R} Sandbox '${sandboxName}' destroyed`);
