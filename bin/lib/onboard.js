@@ -1338,6 +1338,15 @@ async function preflight() {
   return gpu;
 }
 
+// ── Gateway cleanup ──────────────────────────────────────────────
+
+function destroyGateway() {
+  runOpenshell(["gateway", "destroy", "-g", GATEWAY_NAME], { ignoreError: true });
+  // openshell gateway destroy doesn't remove Docker volumes, which leaves
+  // corrupted cluster state that breaks the next gateway start. Clean them up.
+  run(`docker volume ls -q --filter "name=openshell-cluster-${GATEWAY_NAME}" | grep . && docker volume ls -q --filter "name=openshell-cluster-${GATEWAY_NAME}" | xargs docker volume rm || true`, { ignoreError: true });
+}
+
 // ── Step 2: Gateway ──────────────────────────────────────────────
 
 async function startGatewayWithOptions(_gpu, { exitOnFailure = true } = {}) {
@@ -1373,7 +1382,16 @@ async function startGatewayWithOptions(_gpu, { exitOnFailure = true } = {}) {
     console.log(`  Using pinned OpenShell gateway image: ${stableGatewayImage}`);
   }
 
-  runOpenshell(["gateway", "start", ...gwArgs], { ignoreError: false, env: gatewayEnv });
+  const startResult = runOpenshell(["gateway", "start", ...gwArgs], { ignoreError: true, env: gatewayEnv });
+  if (startResult.status !== 0) {
+    console.error("  Gateway failed to start. Cleaning up stale state...");
+    destroyGateway();
+    if (exitOnFailure) {
+      console.error("  Stale state removed. Please rerun: nemoclaw onboard");
+      process.exit(1);
+    }
+    throw new Error("Gateway failed to start");
+  }
 
   // Verify health
   for (let i = 0; i < 5; i++) {
@@ -1384,8 +1402,10 @@ async function startGatewayWithOptions(_gpu, { exitOnFailure = true } = {}) {
       break;
     }
     if (i === 4) {
-      console.error("  Gateway failed to start. Run: openshell gateway info");
+      console.error("  Gateway health check failed. Cleaning up stale state...");
+      destroyGateway();
       if (exitOnFailure) {
+        console.error("  Stale state removed. Please rerun: nemoclaw onboard");
         process.exit(1);
       }
       throw new Error("Gateway failed to start");
