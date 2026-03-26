@@ -126,7 +126,7 @@ fi
 
 info "7. Entrypoint locks PATH to system directories"
 # Run the entrypoint preamble (up to the PATH export) and verify the result
-OUT=$(run_as_root "bash -c 'source <(head -21 /usr/local/bin/nemoclaw-start) 2>/dev/null; echo \$PATH'")
+OUT=$(run_as_root "bash -c 'source <(grep -m1 -A0 \"^export PATH=\" /usr/local/bin/nemoclaw-start) 2>/dev/null; echo \$PATH'")
 if echo "$OUT" | grep -q "^/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin$"; then
   pass "PATH is locked to system directories"
 else
