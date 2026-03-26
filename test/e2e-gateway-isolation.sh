@@ -125,12 +125,17 @@ fi
 # ── Test 7: Entrypoint PATH is locked to system dirs ─────────────
 
 info "7. Entrypoint locks PATH to system directories"
-# Run the entrypoint preamble (up to the PATH export) and verify the result
-OUT=$(run_as_root "bash -c 'source <(grep -m1 -A0 \"^export PATH=\" /usr/local/bin/nemoclaw-start) 2>/dev/null; echo \$PATH'")
-if echo "$OUT" | grep -q "^/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin$"; then
-  pass "PATH is locked to system directories"
+# Verify the entrypoint contains exactly one PATH export with the expected
+# value. Previous approaches sourced partial scripts using hardcoded line
+# counts or grep, which broke when the preamble changed (#830). Checking
+# the file content directly is stable and tests the security property:
+# PATH must be locked before any user-controlled code runs.
+EXPECTED="export PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\""
+COUNT=$(run_as_root "grep -cF '${EXPECTED}' /usr/local/bin/nemoclaw-start")
+if [ "$COUNT" = "1" ]; then
+  pass "PATH is locked to system directories (exactly 1 export)"
 else
-  fail "PATH not locked as expected: $OUT"
+  fail "expected exactly 1 PATH export, found $COUNT"
 fi
 
 # ── Test 8: openclaw resolves to expected absolute path ──────────
