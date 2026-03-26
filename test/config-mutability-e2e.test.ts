@@ -26,8 +26,31 @@ const require = createRequire(import.meta.url);
 const ROOT = path.resolve(import.meta.dirname, "..");
 const NEMOCLAW = path.join(ROOT, "bin", "nemoclaw.js");
 const SANDBOX_NAME = `e2e-config-${Date.now()}`;
-const TIMEOUT_LONG = 300_000; // 5 min for sandbox creation
+const TIMEOUT_LONG = 1_200_000; // 20 min for sandbox creation (Docker image build on macOS)
 const TIMEOUT_MED = 60_000;
+
+// ── Docker socket detection ──────────────────────────────────────────
+// openshell reads DOCKER_HOST or defaults to /var/run/docker.sock.
+// On macOS with Colima, /var/run/docker.sock may point to Docker Desktop
+// while the active Docker context is Colima. Detect and propagate.
+function detectDockerHost(): string | undefined {
+  if (process.env.DOCKER_HOST) return process.env.DOCKER_HOST;
+  try {
+    const endpoint = execSync("docker context inspect --format '{{.Endpoints.docker.Host}}'", {
+      encoding: "utf-8", timeout: 5000, stdio: ["pipe", "pipe", "pipe"],
+    }).trim();
+    if (endpoint && endpoint !== "unix:///var/run/docker.sock") return endpoint;
+  } catch { /* fallback to default */ }
+  return undefined;
+}
+
+const DOCKER_HOST = detectDockerHost();
+const baseEnv: Record<string, string> = {
+  ...process.env as Record<string, string>,
+  NEMOCLAW_NON_INTERACTIVE: "1",
+  NEMOCLAW_SANDBOX_NAME: SANDBOX_NAME,
+  ...(DOCKER_HOST ? { DOCKER_HOST } : {}),
+};
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -35,7 +58,7 @@ function nem(...args: string[]): string {
   return execFileSync("node", [NEMOCLAW, ...args], {
     encoding: "utf-8",
     timeout: TIMEOUT_MED,
-    env: { ...process.env, NEMOCLAW_NON_INTERACTIVE: "1", NEMOCLAW_SANDBOX_NAME: SANDBOX_NAME },
+    env: baseEnv,
   }).trim();
 }
 
@@ -45,7 +68,7 @@ function nemFail(...args: string[]): { status: number; stderr: string; stdout: s
       encoding: "utf-8",
       timeout: TIMEOUT_MED,
       stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env, NEMOCLAW_NON_INTERACTIVE: "1", NEMOCLAW_SANDBOX_NAME: SANDBOX_NAME },
+      env: baseEnv,
     });
     return { status: 0, stderr: "", stdout };
   } catch (err: unknown) {
@@ -81,7 +104,7 @@ function sandboxDownload(sandboxPath: string): string {
 
 function dockerRunning(): boolean {
   try {
-    execSync("docker info", { stdio: "pipe", timeout: 10_000 });
+    execSync("docker info", { stdio: "pipe", timeout: 10_000, env: baseEnv });
     return true;
   } catch {
     return false;
@@ -104,21 +127,46 @@ describeE2E("config mutability E2E", () => {
   // ═══════════════════════════════════════════════════════════════════
 
   beforeAll(() => {
-    // Clean up any leftover sandbox from a previous failed run
+    // Nuke everything — previous failed runs leave stale gateways, sandboxes,
+    // port forwards, Docker containers, and volumes. Clean slate or nothing.
+    try { execSync("openshell forward stop 8080", { env: baseEnv, stdio: "pipe" }); } catch { /* ignore */ }
+    try { execSync("openshell forward stop 18789", { env: baseEnv, stdio: "pipe" }); } catch { /* ignore */ }
     try { nem(SANDBOX_NAME, "destroy", "--yes"); } catch { /* ignore */ }
     try { openshell("sandbox", "delete", SANDBOX_NAME); } catch { /* ignore */ }
+    try { openshell("gateway", "destroy", "-g", "nemoclaw"); } catch { /* ignore */ }
+    // Remove Docker containers and volumes from previous gateway runs
+    try { execSync("docker rm -f openshell-cluster-nemoclaw", { env: baseEnv, stdio: "pipe" }); } catch { /* ignore */ }
+    try { execSync("docker volume rm openshell-cluster-nemoclaw", { env: baseEnv, stdio: "pipe" }); } catch { /* ignore */ }
+    // Kill any stale ssh port-forwards on 8080
+    try {
+      const lsof = execSync("lsof -ti :8080", { encoding: "utf-8", stdio: "pipe" }).trim();
+      if (lsof) execSync(`kill ${lsof}`, { stdio: "pipe" });
+    } catch { /* nothing on port */ }
 
-    // Run nemoclaw onboard (creates gateway + builds Docker image + creates sandbox)
-    // This is the real install path — no mocks.
+    // Full user journey: install.sh --non-interactive does everything a real
+    // user would do — installs deps, starts gateway, builds sandbox image
+    // (with shim), creates sandbox, validates endpoints. No shortcuts.
+    //
+    // install.sh spawns a background port-forward (openshell forward start
+    // --background) that inherits stdout/stderr pipe fds. execSync blocks
+    // until ALL fds close, so it hangs forever. Same pattern as test-full-e2e.sh:
+    // background the install, wait on its PID — the & detaches child fds.
+    const installLog = path.join(os.tmpdir(), `nemoclaw-e2e-install-${Date.now()}.log`);
     execSync(
-      `cd "${ROOT}" && NEMOCLAW_NON_INTERACTIVE=1 NEMOCLAW_SANDBOX_NAME="${SANDBOX_NAME}" bash install.sh --non-interactive`,
+      `cd "${ROOT}" && bash install.sh --non-interactive >"${installLog}" 2>&1 & wait $!`,
       {
         encoding: "utf-8",
         timeout: TIMEOUT_LONG,
-        env: { ...process.env, NEMOCLAW_NON_INTERACTIVE: "1", NEMOCLAW_SANDBOX_NAME: SANDBOX_NAME },
-        stdio: ["pipe", "pipe", "pipe"],
+        env: baseEnv,
+        shell: "/bin/bash",
       },
     );
+    if (fs.existsSync(installLog)) {
+      const log = fs.readFileSync(installLog, "utf-8");
+      if (log.includes("Gateway failed") || log.includes("Sandbox creation failed")) {
+        throw new Error(`install.sh failed:\n${log.slice(-2000)}`);
+      }
+    }
 
     // Wait for sandbox to be ready
     let ready = false;
@@ -262,11 +310,11 @@ describeE2E("config mutability E2E", () => {
         gateway: { auth: { token: "HACKED" } },
         agents: { defaults: { model: { primary: "inference/SHIM-DEFENSE-TEST" } } },
       }, null, 2);
-      const tmpFile = path.join(os.tmpdir(), "poisoned-overrides.json5");
+      const tmpFile = path.join(os.tmpdir(), "config-overrides.json5");
       fs.writeFileSync(tmpFile, poisoned);
       try {
         execSync(
-          `openshell sandbox upload "${SANDBOX_NAME}" "${tmpFile}" /sandbox/.openclaw-data/config-overrides.json5`,
+          `openshell sandbox upload "${SANDBOX_NAME}" "${tmpFile}" /sandbox/.openclaw-data/`,
           { encoding: "utf-8", timeout: TIMEOUT_MED },
         );
       } finally {
