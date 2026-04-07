@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/nvidia-sphinx-theme.css?v=933278ad" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=2e2db37d" />
+    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=ef2c6a0b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
   
   <!-- So that users can add custom icons -->
@@ -326,6 +326,7 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../about/overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/how-it-works.html">How It Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about/ecosystem.html">Ecosystem</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/release-notes.html">Release Notes</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get Started</span></p>
@@ -350,7 +351,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Deployment</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../deployment/deploy-to-remote-gpu.html">Deploy to a Remote GPU Instance</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../deployment/set-up-telegram-bridge.html">Set Up the Telegram Bridge</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../deployment/set-up-telegram-bridge.html">Set Up Telegram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../deployment/sandbox-hardening.html">Sandbox Hardening</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
@@ -481,8 +482,13 @@ Running <code class="docutils literal notranslate"><span class="pre">nemoclaw</s
 <p>Run the interactive setup wizard (recommended for new installs).
 The wizard creates an OpenShell gateway, registers inference providers, builds the sandbox image, and creates the sandbox.
 Use this command for new installs and for recreating a sandbox after changes to policy or configuration.</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>onboard
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>onboard<span class="w"> </span><span class="o">[</span>--non-interactive<span class="o">]</span><span class="w"> </span><span class="o">[</span>--resume<span class="o">]</span><span class="w"> </span><span class="o">[</span>--from<span class="w"> </span>&lt;Dockerfile&gt;<span class="o">]</span>
 </pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>For NemoClaw-managed environments, use <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code> when you need to create or recreate the OpenShell gateway or sandbox.
+Avoid <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">self-update</span></code>, <code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">update</span> <span class="pre">-g</span> <span class="pre">openshell</span></code>, <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">gateway</span> <span class="pre">start</span> <span class="pre">--recreate</span></code>, or <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">sandbox</span> <span class="pre">create</span></code> directly unless you intend to manage OpenShell separately and then rerun <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code>.</p>
 </div>
 <p>The wizard prompts for a provider first, then collects the provider credential if needed.
 Supported non-experimental choices include NVIDIA Endpoints, OpenAI, Anthropic, Google Gemini, and compatible OpenAI or Anthropic endpoints.
@@ -511,6 +517,21 @@ Names must follow RFC 1123 subdomain rules: lowercase alphanumeric characters an
 Uppercase letters are automatically lowercased.</p>
 <p>Before creating the gateway, the wizard runs preflight checks.
 It verifies that Docker is reachable, warns on unsupported runtimes such as Podman, and prints host remediation guidance when prerequisites are missing.</p>
+<section id="from-dockerfile">
+<h4><code class="docutils literal notranslate"><span class="pre">--from</span> <span class="pre">&lt;Dockerfile&gt;</span></code><a class="headerlink" href="#from-dockerfile" title="Link to this heading">#</a></h4>
+<p>Build the sandbox image from a custom Dockerfile instead of the stock NemoClaw image.
+The entire parent directory of the specified file is used as the Docker build context, so any files your Dockerfile references (scripts, config, etc.) must live alongside it.</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>onboard<span class="w"> </span>--from<span class="w"> </span>path/to/Dockerfile
+</pre></div>
+</div>
+<p>The file can have any name; if it is not already named <code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code>, onboard copies it to <code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code> inside the staged build context automatically.
+All NemoClaw build arguments (<code class="docutils literal notranslate"><span class="pre">NEMOCLAW_MODEL</span></code>, <code class="docutils literal notranslate"><span class="pre">NEMOCLAW_PROVIDER_KEY</span></code>, <code class="docutils literal notranslate"><span class="pre">NEMOCLAW_INFERENCE_BASE_URL</span></code>, etc.) are injected as <code class="docutils literal notranslate"><span class="pre">ARG</span></code> overrides at build time, so declare them in your Dockerfile if you need to reference them.</p>
+<p>In non-interactive mode, the path can also be supplied via the <code class="docutils literal notranslate"><span class="pre">NEMOCLAW_FROM_DOCKERFILE</span></code> environment variable:</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nv">NEMOCLAW_NON_INTERACTIVE</span><span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="nv">NEMOCLAW_FROM_DOCKERFILE</span><span class="o">=</span>path/to/Dockerfile<span class="w"> </span>nemoclaw<span class="w"> </span>onboard
+</pre></div>
+</div>
+<p>If a <code class="docutils literal notranslate"><span class="pre">--resume</span></code> is attempted with a different <code class="docutils literal notranslate"><span class="pre">--from</span></code> path than the original session, onboarding exits with a conflict error rather than silently building from the wrong image.</p>
+</section>
 </section>
 <section id="nemoclaw-list">
 <h3><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">list</span></code><a class="headerlink" href="#nemoclaw-list" title="Link to this heading">#</a></h3>
@@ -594,22 +615,21 @@ Run this on the host where the sandbox is running.</p>
 </section>
 <section id="nemoclaw-start">
 <h3><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">start</span></code><a class="headerlink" href="#nemoclaw-start" title="Link to this heading">#</a></h3>
-<p>Start auxiliary services, such as the Telegram bridge and cloudflared tunnel.</p>
+<p>Start optional host auxiliary services. This is the cloudflared tunnel when <code class="docutils literal notranslate"><span class="pre">cloudflared</span></code> is installed (for a public URL to the dashboard). Channel messaging (Telegram, Discord, Slack) is not started here; it is configured during <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code> and runs through OpenShell-managed constructs.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>start
 </pre></div>
 </div>
-<p>Requires <code class="docutils literal notranslate"><span class="pre">TELEGRAM_BOT_TOKEN</span></code> for the Telegram bridge.</p>
 </section>
 <section id="nemoclaw-stop">
 <h3><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">stop</span></code><a class="headerlink" href="#nemoclaw-stop" title="Link to this heading">#</a></h3>
-<p>Stop all auxiliary services.</p>
+<p>Stop host auxiliary services started by <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">start</span></code> (for example cloudflared).</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>stop
 </pre></div>
 </div>
 </section>
 <section id="nemoclaw-status">
 <h3><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">status</span></code><a class="headerlink" href="#nemoclaw-status" title="Link to this heading">#</a></h3>
-<p>Show the sandbox list and the status of auxiliary services.</p>
+<p>Show the sandbox list and the status of host auxiliary services (for example cloudflared).</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>status
 </pre></div>
 </div>
@@ -745,7 +765,10 @@ Running <code class="docutils literal notranslate"><span class="pre">nemoclaw</s
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#standalone-host-commands">Standalone Host Commands</a><ul class="nav section-nav flex-column">
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nemoclaw-help-nemoclaw-help-nemoclaw-h"><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">help</span></code>, <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">--help</span></code>, <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">-h</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nemoclaw-version-nemoclaw-v"><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">--version</span></code>, <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">-v</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nemoclaw-onboard"><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nemoclaw-onboard"><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code></a><ul class="nav section-nav flex-column">
+<li class="toc-h4 nav-item toc-entry"><a class="reference internal nav-link" href="#from-dockerfile"><code class="docutils literal notranslate"><span class="pre">--from</span> <span class="pre">&lt;Dockerfile&gt;</span></code></a></li>
+</ul>
+</li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nemoclaw-list"><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">list</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nemoclaw-deploy"><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">deploy</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#nemoclaw-name-connect"><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">&lt;name&gt;</span> <span class="pre">connect</span></code></a></li>

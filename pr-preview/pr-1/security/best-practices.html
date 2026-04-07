@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/nvidia-sphinx-theme.css?v=933278ad" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=2e2db37d" />
+    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=ef2c6a0b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
   
   <!-- So that users can add custom icons -->
@@ -762,6 +762,7 @@ window.runMermaid = runMermaid;</script>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../about/overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/how-it-works.html">How It Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about/ecosystem.html">Ecosystem</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/release-notes.html">Release Notes</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get Started</span></p>
@@ -786,7 +787,7 @@ window.runMermaid = runMermaid;</script>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Deployment</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../deployment/deploy-to-remote-gpu.html">Deploy to a Remote GPU Instance</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../deployment/set-up-telegram-bridge.html">Set Up the Telegram Bridge</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../deployment/set-up-telegram-bridge.html">Set Up Telegram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../deployment/sandbox-hardening.html">Sandbox Hardening</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
@@ -885,7 +886,7 @@ You can hot-reload others while the sandbox runs.</p>
 <p>The following diagram shows the default posture immediately after <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code>, before you approve any endpoints or apply any presets.</p>
 <pre  class="mermaid">
         flowchart TB
-    subgraph HOST[&quot;Your Machine — default posture after nemoclaw onboard&quot;]
+    subgraph HOST[&quot;Your Machine: default posture after nemoclaw onboard&quot;]
         direction TB
 
         YOU[&quot;👤 Operator&quot;]
@@ -893,14 +894,14 @@ You can hot-reload others while the sandbox runs.</p>
         subgraph NC[&quot;NemoClaw + OpenShell&quot;]
             direction TB
 
-            subgraph SB[&quot;Sandbox — the agent's isolated world&quot;]
+            subgraph SB[&quot;Sandbox: the agent's isolated world&quot;]
                 direction LR
                 PROC[&quot;⚙️ Process Layer&lt;br/&gt;Controls what the agent can execute&quot;]
                 FS[&quot;📁 Filesystem Layer&lt;br/&gt;Controls what the agent can read and write&quot;]
                 AGENT[&quot;🤖 Agent&quot;]
             end
 
-            subgraph GW[&quot;Gateway — the gatekeeper&quot;]
+            subgraph GW[&quot;Gateway: the gatekeeper&quot;]
                 direction LR
                 NET[&quot;🌐 Network Layer&lt;br/&gt;Controls where the agent can connect&quot;]
                 INF[&quot;🧠 Inference Layer&lt;br/&gt;Controls which AI models the agent can use&quot;]

@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/nvidia-sphinx-theme.css?v=933278ad" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=2e2db37d" />
+    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=ef2c6a0b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
   
   <!-- So that users can add custom icons -->
@@ -326,6 +326,7 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../about/overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/how-it-works.html">How It Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about/ecosystem.html">Ecosystem</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/release-notes.html">Release Notes</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get Started</span></p>
@@ -350,7 +351,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Deployment</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../deployment/deploy-to-remote-gpu.html">Deploy to a Remote GPU Instance</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../deployment/set-up-telegram-bridge.html">Set Up the Telegram Bridge</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../deployment/set-up-telegram-bridge.html">Set Up Telegram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../deployment/sandbox-hardening.html">Sandbox Hardening</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
@@ -489,7 +490,7 @@ These files live at <code class="docutils literal notranslate"><span class="pre"
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>The workspace directory is hidden (<code class="docutils literal notranslate"><span class="pre">.openclaw</span></code>).
-The files are not at <code class="docutils literal notranslate"><span class="pre">/sandbox/SOUL.md</span></code> — use the full path when downloading or uploading.</p>
+The files are not at <code class="docutils literal notranslate"><span class="pre">/sandbox/SOUL.md</span></code>. Use the full path when downloading or uploading.</p>
 </div>
 </section>
 <section id="persistence-behavior">
@@ -503,10 +504,10 @@ The files are not at <code class="docutils literal notranslate"><span class="pre
 </thead>
 <tbody>
 <tr class="row-even"><td><p>Sandbox restart</p></td>
-<td><p><strong>Preserved</strong> — the sandbox PVC retains its data.</p></td>
+<td><p><strong>Preserved:</strong> the sandbox PVC retains its data.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">&lt;name&gt;</span> <span class="pre">destroy</span></code></p></td>
-<td><p><strong>Lost</strong> — the sandbox and its PVC are deleted.</p></td>
+<td><p><strong>Lost:</strong> the sandbox and its PVC are deleted.</p></td>
 </tr>
 </tbody>
 </table>
@@ -522,8 +523,8 @@ See <a class="reference internal" href="backup-restore.html"><span class="std st
 <p>The agent reads these files at the start of every session.
 You can edit them in two ways:</p>
 <ol class="arabic simple">
-<li><p><strong>Let the agent do it</strong> — Ask your agent to update its persona, memory, or user context during a session.</p></li>
-<li><p><strong>Edit manually</strong> — Use <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">sandbox</span> <span class="pre">connect</span></code> to open a terminal inside the sandbox and edit files directly, or use <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">sandbox</span> <span class="pre">upload</span></code> to push edited files from your host.</p></li>
+<li><p><strong>Let the agent do it:</strong> Ask your agent to update its persona, memory, or user context during a session.</p></li>
+<li><p><strong>Edit manually:</strong> Use <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">sandbox</span> <span class="pre">connect</span></code> to open a terminal inside the sandbox and edit files directly, or use <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">sandbox</span> <span class="pre">upload</span></code> to push edited files from your host.</p></li>
 </ol>
 </section>
 <section id="next-steps">

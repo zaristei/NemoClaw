@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/nvidia-sphinx-theme.css?v=933278ad" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=2e2db37d" />
+    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=ef2c6a0b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
   
   <!-- So that users can add custom icons -->
@@ -58,7 +58,7 @@
     <link rel="icon" href="../_static/favicon.png"/>
 
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Set Up the Telegram Bridge" href="set-up-telegram-bridge.html" />
+    <link rel="next" title="Set Up Telegram" href="set-up-telegram-bridge.html" />
     <link rel="prev" title="Security Best Practices" href="../security/best-practices.html" />
 
 
@@ -326,6 +326,7 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../about/overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/how-it-works.html">How It Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about/ecosystem.html">Ecosystem</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/release-notes.html">Release Notes</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get Started</span></p>
@@ -350,7 +351,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Deployment</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1 current active"><a class="current reference internal" href="#">Deploy to a Remote GPU Instance</a></li>
-<li class="toctree-l1"><a class="reference internal" href="set-up-telegram-bridge.html">Set Up the Telegram Bridge</a></li>
+<li class="toctree-l1"><a class="reference internal" href="set-up-telegram-bridge.html">Set Up Telegram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sandbox-hardening.html">Sandbox Hardening</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
@@ -469,7 +470,7 @@ Prefer provisioning the remote host separately, then running the standard NemoCl
 <li><p>Installs Docker and the NVIDIA Container Toolkit if a GPU is present.</p></li>
 <li><p>Installs the OpenShell CLI.</p></li>
 <li><p>Runs <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code> (the setup wizard) to create the gateway, register providers, and launch the sandbox.</p></li>
-<li><p>Starts auxiliary services, such as the Telegram bridge and cloudflared tunnel, when those tools are available.</p></li>
+<li><p>Starts optional host auxiliary services (for example the cloudflared tunnel) when <code class="docutils literal notranslate"><span class="pre">cloudflared</span></code> is available. Channel messaging is configured during onboarding and runs through OpenShell-managed processes, not through <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">start</span></code>.</p></li>
 </ol>
 <p>By default, the compatibility wrapper asks Brev to provision on <code class="docutils literal notranslate"><span class="pre">gcp</span></code>. Override this with <code class="docutils literal notranslate"><span class="pre">NEMOCLAW_BREV_PROVIDER</span></code> if you need a different Brev cloud provider.</p>
 </section>
@@ -508,11 +509,14 @@ into the sandbox image at build time.  By default the allowlist only contains
 </div>
 <p>For SSH port-forwarding, the origin is typically <code class="docutils literal notranslate"><span class="pre">http://127.0.0.1:18789</span></code> (the
 default), so no extra configuration is needed.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
 <p>On Brev, set <code class="docutils literal notranslate"><span class="pre">CHAT_UI_URL</span></code> in the launchable environment configuration so it is
 available when the installer builds the sandbox image. If <code class="docutils literal notranslate"><span class="pre">CHAT_UI_URL</span></code> is not
 set on a headless host, the compatibility wrapper prints a warning.</p>
+<p><code class="docutils literal notranslate"><span class="pre">NEMOCLAW_DISABLE_DEVICE_AUTH</span></code> is also evaluated at image build time.
+If you disable device auth for a remote deployment, any device that can reach the dashboard origin can connect without pairing.
+Avoid this on internet-reachable or shared-network deployments.</p>
 </div>
 </section>
 <section id="gpu-configuration">
@@ -528,7 +532,7 @@ Set this variable before running <code class="docutils literal notranslate"><spa
 <section id="related-topics">
 <h2>Related Topics<a class="headerlink" href="#related-topics" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p><a class="reference internal" href="set-up-telegram-bridge.html"><span class="std std-doc">Set Up the Telegram Bridge</span></a> to interact with the remote agent through Telegram.</p></li>
+<li><p><a class="reference internal" href="set-up-telegram-bridge.html"><span class="std std-doc">Set Up Telegram</span></a> to connect Telegram through OpenShell-managed channel messaging.</p></li>
 <li><p><a class="reference internal" href="../monitoring/monitor-sandbox-activity.html"><span class="std std-doc">Monitor Sandbox Activity</span></a> for sandbox monitoring tools.</p></li>
 <li><p><a class="reference internal" href="../reference/commands.html"><span class="std std-doc">Commands</span></a> for the full <code class="docutils literal notranslate"><span class="pre">deploy</span></code> command reference.</p></li>
 </ul>
@@ -559,7 +563,7 @@ Set this variable before running <code class="docutils literal notranslate"><spa
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Set Up the Telegram Bridge</p>
+        <p class="prev-next-title">Set Up Telegram</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

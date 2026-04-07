@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="_static/styles/nvidia-sphinx-theme.css?v=933278ad" />
     <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="_static/enhanced-search.css?v=2e2db37d" />
+    <link rel="stylesheet" type="text/css" href="_static/enhanced-search.css?v=ef2c6a0b" />
     <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
   
   <!-- So that users can add custom icons -->
@@ -325,6 +325,7 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="about/overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="about/how-it-works.html">How It Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="about/ecosystem.html">Ecosystem</a></li>
 <li class="toctree-l1"><a class="reference internal" href="about/release-notes.html">Release Notes</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get Started</span></p>
@@ -349,7 +350,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Deployment</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="deployment/deploy-to-remote-gpu.html">Deploy to a Remote GPU Instance</a></li>
-<li class="toctree-l1"><a class="reference internal" href="deployment/set-up-telegram-bridge.html">Set Up the Telegram Bridge</a></li>
+<li class="toctree-l1"><a class="reference internal" href="deployment/set-up-telegram-bridge.html">Set Up Telegram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="deployment/sandbox-hardening.html">Sandbox Hardening</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
@@ -411,6 +412,7 @@
 <a class="reference external" href="https://github.com/NVIDIA/NemoClaw/blob/main/docs/about/release-notes.md" rel="noreferer noopener" target="_blank"><img alt="Project Status" src="https://img.shields.io/badge/status-alpha-orange" /></a>
 <a class="reference external" href="https://discord.gg/XFpfPv9Uvx" rel="noreferer noopener" target="_blank"><img alt="Discord" src="https://img.shields.io/badge/Discord-Join-7289da" /></a></p>
 <p>NVIDIA NemoClaw is an open source reference stack that simplifies running <a class="reference external" href="https://openclaw.ai" rel="noreferer noopener" target="_blank">OpenClaw</a> always-on assistants more safely.
+NemoClaw provides onboarding, lifecycle management, and management of OpenClaw within OpenShell containers.
 It installs the <a class="reference external" href="https://github.com/NVIDIA/OpenShell" rel="noreferer noopener" target="_blank">NVIDIA OpenShell</a> runtime, part of NVIDIA Agent Toolkit, an environment designed for executing claws with additional security, and open source models like <a class="reference external" href="https://build.nvidia.com" rel="noreferer noopener" target="_blank">NVIDIA Nemotron</a>.</p>
 <section id="get-started">
 <h2>Get Started<a class="headerlink" href="#get-started" title="Link to this heading">#</a></h2>
@@ -474,12 +476,24 @@ You can also clone the <a class="reference external" href="https://github.com/NV
 <div class="sd-card-body docutils">
 <div class="sd-card-title sd-font-weight-bold docutils">
 About NemoClaw</div>
-<p class="sd-card-text">Learn what NemoClaw does and how it integrates OpenClaw with OpenShell.</p>
+<p class="sd-card-text">What NemoClaw is: capabilities, benefits, and typical uses.</p>
 </div>
 <div class="sd-card-footer docutils">
 <p class="sd-card-text"><span class="sd-sphinx-override sd-badge sd-bg-secondary sd-bg-text-secondary">Concept</span></p>
 </div>
 <a class="sd-stretched-link sd-hide-link-text reference internal" href="about/overview.html"><span class="doc">Overview</span></a></div>
+</div>
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
+<div class="sd-card-body docutils">
+<div class="sd-card-title sd-font-weight-bold docutils">
+Ecosystem</div>
+<p class="sd-card-text">How OpenClaw, OpenShell, and NemoClaw form a stack and when to use NemoClaw versus OpenShell alone.</p>
+</div>
+<div class="sd-card-footer docutils">
+<p class="sd-card-text"><span class="sd-sphinx-override sd-badge sd-bg-secondary sd-bg-text-secondary">Concept</span></p>
+</div>
+<a class="sd-stretched-link sd-hide-link-text reference internal" href="about/ecosystem.html"><span class="doc">Ecosystem</span></a></div>
 </div>
 <div class="sd-col sd-d-flex-row docutils">
 <div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm sd-card-hover docutils">
@@ -522,7 +536,7 @@ Inference Options</div>
 <div class="sd-card-body docutils">
 <div class="sd-card-title sd-font-weight-bold docutils">
 How It Works</div>
-<p class="sd-card-text">High-level overview of the plugin, blueprint, sandbox, and inference routing.</p>
+<p class="sd-card-text">How NemoClaw runs: plugin, blueprint, OpenShell orchestration, routing, and policy layers.</p>
 </div>
 <div class="sd-card-footer docutils">
 <p class="sd-card-text"><span class="sd-sphinx-override sd-badge sd-bg-secondary sd-bg-text-secondary">Concept</span></p>

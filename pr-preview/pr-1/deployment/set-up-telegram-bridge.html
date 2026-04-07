@@ -9,7 +9,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Set Up the Telegram Bridge &#8212; NVIDIA NemoClaw Developer Guide</title>
+    <title>Set Up Telegram &#8212; NVIDIA NemoClaw Developer Guide</title>
   
   
   
@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/nvidia-sphinx-theme.css?v=933278ad" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=2e2db37d" />
+    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=ef2c6a0b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
   
   <!-- So that users can add custom icons -->
@@ -326,6 +326,7 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../about/overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/how-it-works.html">How It Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about/ecosystem.html">Ecosystem</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/release-notes.html">Release Notes</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get Started</span></p>
@@ -350,7 +351,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Deployment</span></p>
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="deploy-to-remote-gpu.html">Deploy to a Remote GPU Instance</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Set Up the Telegram Bridge</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Set Up Telegram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sandbox-hardening.html">Sandbox Hardening</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
@@ -408,7 +409,7 @@
         <i class="fa-solid fa-home"></i>
       </a>
     </li>
-    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Set Up the Telegram Bridge</span></li>
+    <li class="breadcrumb-item active" aria-current="page"><span class="ellipsis">Set Up Telegram</span></li>
   </ul>
 </nav>
 </div>
@@ -429,75 +430,71 @@
   SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: Apache-2.0
 -->
-<section class="tex2jax_ignore mathjax_ignore" id="set-up-the-telegram-bridge">
-<h1>Set Up the Telegram Bridge<a class="headerlink" href="#set-up-the-telegram-bridge" title="Link to this heading">#</a></h1>
-<p>Forward messages between a Telegram bot and the OpenClaw agent running inside the sandbox.
-The Telegram bridge is an auxiliary service managed by <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">start</span></code>.</p>
+<section class="tex2jax_ignore mathjax_ignore" id="set-up-telegram">
+<h1>Set Up Telegram<a class="headerlink" href="#set-up-telegram" title="Link to this heading">#</a></h1>
+<p>Telegram, Discord, and Slack reach your agent through OpenShell-managed processes and gateway constructs.
+NemoClaw configures those channels during <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code>. Tokens are registered with OpenShell providers, channel configuration is baked into the sandbox image, and runtime delivery stays under OpenShell control.</p>
+<p><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">start</span></code> does not start Telegram (or other chat bridges). It only starts optional host services such as the cloudflared tunnel when that binary is present.
+For details, refer to <a class="reference internal" href="../reference/commands.html"><span class="std std-doc">Commands</span></a>.</p>
 <section id="prerequisites">
 <h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p>A running NemoClaw sandbox, either local or remote.</p></li>
+<li><p>A machine where you can run <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code> (local or remote host that runs the gateway and sandbox).</p></li>
 <li><p>A Telegram bot token from <a class="reference external" href="https://t.me/BotFather" rel="noreferer noopener" target="_blank">BotFather</a>.</p></li>
 </ul>
 </section>
 <section id="create-a-telegram-bot">
 <h2>Create a Telegram Bot<a class="headerlink" href="#create-a-telegram-bot" title="Link to this heading">#</a></h2>
 <p>Open Telegram and send <code class="docutils literal notranslate"><span class="pre">/newbot</span></code> to <a class="reference external" href="https://t.me/BotFather" rel="noreferer noopener" target="_blank">&#64;BotFather</a>.
-Follow the prompts to create a bot and receive a bot token.</p>
+Follow the prompts to create a bot and copy the bot token.</p>
 </section>
-<section id="set-the-environment-variable">
-<h2>Set the Environment Variable<a class="headerlink" href="#set-the-environment-variable" title="Link to this heading">#</a></h2>
-<p>Export the bot token as an environment variable:</p>
+<section id="provide-the-bot-token-and-optional-allowlist">
+<h2>Provide the Bot Token and Optional Allowlist<a class="headerlink" href="#provide-the-bot-token-and-optional-allowlist" title="Link to this heading">#</a></h2>
+<p>Onboarding reads Telegram credentials from either host environment variables or the NemoClaw credential store (<code class="docutils literal notranslate"><span class="pre">getCredential</span></code> / <code class="docutils literal notranslate"><span class="pre">saveCredential</span></code> in the onboard flow). You do not have to export variables if you enter the token when the wizard asks.</p>
+<section id="option-a-environment-variables-ci-scripts-or-before-you-start-the-wizard">
+<h3>Option A: Environment variables (CI, scripts, or before you start the wizard)<a class="headerlink" href="#option-a-environment-variables-ci-scripts-or-before-you-start-the-wizard" title="Link to this heading">#</a></h3>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">export</span><span class="w"> </span><span class="nv">TELEGRAM_BOT_TOKEN</span><span class="o">=</span>&lt;your-bot-token&gt;
 </pre></div>
 </div>
+<p>Optional comma-separated allowlist (maps to the wizard field “Telegram User ID (for DM access)”):</p>
+<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">export</span><span class="w"> </span><span class="nv">TELEGRAM_ALLOWED_IDS</span><span class="o">=</span><span class="s2">&quot;123456789,987654321&quot;</span>
+</pre></div>
+</div>
 </section>
-<section id="start-auxiliary-services">
-<h2>Start Auxiliary Services<a class="headerlink" href="#start-auxiliary-services" title="Link to this heading">#</a></h2>
-<p>Start the Telegram bridge and other auxiliary services:</p>
+<section id="option-b-interactive-nemoclaw-onboard">
+<h3>Option B: Interactive <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code><a class="headerlink" href="#option-b-interactive-nemoclaw-onboard" title="Link to this heading">#</a></h3>
+<p>When the wizard reaches <strong>Messaging channels</strong>, it lists Telegram, Discord, and Slack.
+Press <strong>1</strong> to toggle Telegram on or off, then <strong>Enter</strong> when done.
+If the token is not already in the environment or credential store, the wizard prompts for it and saves it to the store.
+If <code class="docutils literal notranslate"><span class="pre">TELEGRAM_ALLOWED_IDS</span></code> is not set, the wizard can prompt for allowed sender IDs for Telegram DMs (you can leave this blank and rely on OpenClaw pairing instead).</p>
+</section>
+</section>
+<section id="run-nemoclaw-onboard">
+<h2>Run <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code><a class="headerlink" href="#run-nemoclaw-onboard" title="Link to this heading">#</a></h2>
+<p>Complete the rest of the wizard so the blueprint can create OpenShell providers (for example <code class="docutils literal notranslate"><span class="pre">&lt;sandbox&gt;-telegram-bridge</span></code>), bake channel configuration into the image (<code class="docutils literal notranslate"><span class="pre">NEMOCLAW_MESSAGING_CHANNELS_B64</span></code>), and start the sandbox.</p>
+<p>Channel entries in <code class="docutils literal notranslate"><span class="pre">/sandbox/.openclaw/openclaw.json</span></code> are fixed at image build time. Landlock keeps that path read-only at runtime, so you cannot patch messaging config inside a running sandbox.</p>
+<p>If you add or change <code class="docutils literal notranslate"><span class="pre">TELEGRAM_BOT_TOKEN</span></code> (or toggle channels) after a sandbox already exists, you typically need to run <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code> again so the image and provider attachments are rebuilt with the new settings.</p>
+<p>For a full first-time flow, refer to <a class="reference internal" href="../get-started/quickstart.html"><span class="std std-doc">Quickstart</span></a>.</p>
+</section>
+<section id="confirm-delivery">
+<h2>Confirm Delivery<a class="headerlink" href="#confirm-delivery" title="Link to this heading">#</a></h2>
+<p>After the sandbox is running, send a message to your bot in Telegram.
+If something fails, use <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">term</span></code> on the host, check gateway logs, and verify network policy allows the Telegram API (see <a class="reference internal" href="../network-policy/customize-network-policy.html"><span class="std std-doc">Customize the Network Policy</span></a> and the <code class="docutils literal notranslate"><span class="pre">telegram</span></code> preset).</p>
+</section>
+<section id="nemoclaw-start-cloudflared-only">
+<h2><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">start</span></code> (cloudflared Only)<a class="headerlink" href="#nemoclaw-start-cloudflared-only" title="Link to this heading">#</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">start</span></code> starts cloudflared when it is installed, which can expose the dashboard with a public URL.
+It does not affect Telegram connectivity.</p>
 <div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>start
-</pre></div>
-</div>
-<p>The <code class="docutils literal notranslate"><span class="pre">start</span></code> command launches the following services:</p>
-<ul class="simple">
-<li><p>The Telegram bridge forwards messages between Telegram and the agent.</p></li>
-<li><p>The cloudflared tunnel provides external access to the sandbox.</p></li>
-</ul>
-<p>The Telegram bridge starts only when the <code class="docutils literal notranslate"><span class="pre">TELEGRAM_BOT_TOKEN</span></code> environment variable is set.</p>
-</section>
-<section id="verify-the-services">
-<h2>Verify the Services<a class="headerlink" href="#verify-the-services" title="Link to this heading">#</a></h2>
-<p>Check that the Telegram bridge is running:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>status
-</pre></div>
-</div>
-<p>The output shows the status of all auxiliary services.</p>
-</section>
-<section id="send-a-message">
-<h2>Send a Message<a class="headerlink" href="#send-a-message" title="Link to this heading">#</a></h2>
-<p>Open Telegram, find your bot, and send a message.
-The bridge forwards the message to the OpenClaw agent inside the sandbox and returns the agent response.</p>
-</section>
-<section id="restrict-access-by-chat-id">
-<h2>Restrict Access by Chat ID<a class="headerlink" href="#restrict-access-by-chat-id" title="Link to this heading">#</a></h2>
-<p>To restrict which Telegram chats can interact with the agent, set the <code class="docutils literal notranslate"><span class="pre">ALLOWED_CHAT_IDS</span></code> environment variable to a comma-separated list of Telegram chat IDs:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span><span class="nb">export</span><span class="w"> </span><span class="nv">ALLOWED_CHAT_IDS</span><span class="o">=</span><span class="s2">&quot;123456789,987654321&quot;</span>
-<span class="gp">$ </span>nemoclaw<span class="w"> </span>start
-</pre></div>
-</div>
-</section>
-<section id="stop-the-services">
-<h2>Stop the Services<a class="headerlink" href="#stop-the-services" title="Link to this heading">#</a></h2>
-<p>To stop the Telegram bridge and all other auxiliary services:</p>
-<div class="highlight-console notranslate"><div class="highlight"><pre><span></span><span class="gp">$ </span>nemoclaw<span class="w"> </span>stop
 </pre></div>
 </div>
 </section>
 <section id="related-topics">
 <h2>Related Topics<a class="headerlink" href="#related-topics" title="Link to this heading">#</a></h2>
 <ul class="simple">
-<li><p><a class="reference internal" href="deploy-to-remote-gpu.html"><span class="std std-doc">Deploy NemoClaw to a Remote GPU Instance</span></a> for remote deployment with Telegram support.</p></li>
-<li><p><a class="reference internal" href="../reference/commands.html"><span class="std std-doc">Commands</span></a> for the full <code class="docutils literal notranslate"><span class="pre">start</span></code> and <code class="docutils literal notranslate"><span class="pre">stop</span></code> command reference.</p></li>
+<li><p><a class="reference internal" href="deploy-to-remote-gpu.html"><span class="std std-doc">Deploy NemoClaw to a Remote GPU Instance</span></a> for remote deployment with messaging.</p></li>
+<li><p><a class="reference internal" href="../reference/architecture.html"><span class="std std-doc">Architecture</span></a> for how providers, the gateway, and the sandbox fit together.</p></li>
+<li><p><a class="reference internal" href="../reference/commands.html"><span class="std std-doc">Commands</span></a> for <code class="docutils literal notranslate"><span class="pre">start</span></code>, <code class="docutils literal notranslate"><span class="pre">stop</span></code>, and <code class="docutils literal notranslate"><span class="pre">status</span></code>.</p></li>
 </ul>
 </section>
 </section>
@@ -553,12 +550,14 @@ The bridge forwards the message to the OpenClaw agent inside the sandbox and ret
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#prerequisites">Prerequisites</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#create-a-telegram-bot">Create a Telegram Bot</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#set-the-environment-variable">Set the Environment Variable</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#start-auxiliary-services">Start Auxiliary Services</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#verify-the-services">Verify the Services</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#send-a-message">Send a Message</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#restrict-access-by-chat-id">Restrict Access by Chat ID</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#stop-the-services">Stop the Services</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#provide-the-bot-token-and-optional-allowlist">Provide the Bot Token and Optional Allowlist</a><ul class="nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-a-environment-variables-ci-scripts-or-before-you-start-the-wizard">Option A: Environment variables (CI, scripts, or before you start the wizard)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-b-interactive-nemoclaw-onboard">Option B: Interactive <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code></a></li>
+</ul>
+</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#run-nemoclaw-onboard">Run <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#confirm-delivery">Confirm Delivery</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#nemoclaw-start-cloudflared-only"><code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">start</span></code> (cloudflared Only)</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#related-topics">Related Topics</a></li>
 </ul>
   </nav></div>

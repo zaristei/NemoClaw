@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/nvidia-sphinx-theme.css?v=933278ad" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=2e2db37d" />
+    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=ef2c6a0b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
   
   <!-- So that users can add custom icons -->
@@ -762,6 +762,7 @@ window.runMermaid = runMermaid;</script>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../about/overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/how-it-works.html">How It Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about/ecosystem.html">Ecosystem</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/release-notes.html">Release Notes</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get Started</span></p>
@@ -786,7 +787,7 @@ window.runMermaid = runMermaid;</script>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Deployment</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../deployment/deploy-to-remote-gpu.html">Deploy to a Remote GPU Instance</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../deployment/set-up-telegram-bridge.html">Set Up the Telegram Bridge</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../deployment/set-up-telegram-bridge.html">Set Up Telegram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../deployment/sandbox-hardening.html">Sandbox Hardening</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
@@ -893,7 +894,6 @@ window.runMermaid = runMermaid;</script>
         subgraph NEMOCLAW[&quot;NemoClaw&quot;]
             direction TB
             NCLI[&quot;CLI + Onboarding&lt;br/&gt;&lt;small&gt;Guided setup · provider selection&lt;br/&gt;credential validation · deploy&lt;/small&gt;&quot;]:::nemoclaw
-            BRIDGE[&quot;Messaging Bridges&lt;br/&gt;&lt;small&gt;Connect chat platforms&lt;br/&gt;to sandboxed agent&lt;/small&gt;&quot;]:::nemoclaw
             BP[&quot;Blueprint&lt;br/&gt;&lt;small&gt;Hardened Dockerfile&lt;br/&gt;Network policies · Presets&lt;br/&gt;Security configuration&lt;/small&gt;&quot;]:::nemoclaw
             MIGRATE[&quot;State Management&lt;br/&gt;&lt;small&gt;Migration snapshots&lt;br/&gt;Credential stripping&lt;br/&gt;Integrity verification&lt;/small&gt;&quot;]:::nemoclaw
         end
@@ -902,6 +902,7 @@ window.runMermaid = runMermaid;</script>
             direction TB
             GW[&quot;Gateway&lt;br/&gt;&lt;small&gt;Credential store&lt;br/&gt;Inference proxy&lt;br/&gt;Policy engine&lt;br/&gt;Device auth&lt;/small&gt;&quot;]:::openshell
             OSCLI[&quot;openshell CLI&lt;br/&gt;&lt;small&gt;provider · sandbox&lt;br/&gt;gateway · policy&lt;/small&gt;&quot;]:::openshell
+            CHMSG[&quot;Channel messaging&lt;br/&gt;&lt;small&gt;OpenShell-managed&lt;br/&gt;Telegram · Discord · Slack&lt;/small&gt;&quot;]:::openshell
 
             subgraph SANDBOX[&quot;Sandbox Container 🔒&quot;]
                 direction TB
@@ -921,8 +922,8 @@ window.runMermaid = runMermaid;</script>
     AGENT --&gt;|&quot;Inference requests&lt;br/&gt;&lt;small&gt;no credentials&lt;/small&gt;&quot;| GW
     GW --&gt;|&quot;Proxied with&lt;br/&gt;credential injected&quot;| INFERENCE
 
-    MSGAPI --&gt;|&quot;Bot messages&quot;| BRIDGE
-    BRIDGE --&gt;|&quot;Relayed as data&lt;br/&gt;via SSH&quot;| AGENT
+    MSGAPI --&gt;|&quot;Platform APIs&quot;| CHMSG
+    CHMSG --&gt;|&quot;Deliver to agent&quot;| AGENT
 
     AGENT -.-&gt;|&quot;Policy-gated&quot;| INTERNET
     GW -.-&gt;|&quot;Enforced by&lt;br/&gt;gateway&quot;| INTERNET
@@ -933,7 +934,7 @@ window.runMermaid = runMermaid;</script>
 It runs in-process with the OpenClaw gateway inside the sandbox.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>nemoclaw/
 ├── src/
-│   ├── index.ts                    Plugin entry — registers all commands
+│   ├── index.ts                    Plugin entry: registers all commands
 │   ├── cli.ts                      Commander.js subcommand wiring
 │   ├── commands/
 │   │   ├── launch.ts               Fresh install into OpenShell
@@ -958,14 +959,14 @@ It runs in-process with the OpenClaw gateway inside the sandbox.</p>
 The plugin resolves, verifies, and executes the blueprint as a subprocess.
 The blueprint drives all interactions with the OpenShell CLI.</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>nemoclaw-blueprint/
-├── blueprint.yaml                  Manifest — version, profiles, compatibility
+├── blueprint.yaml                  Manifest: version, profiles, compatibility
 ├── policies/
 │   └── openclaw-sandbox.yaml       Default network + filesystem policy
 </pre></div>
 </div>
 <p>The blueprint runtime (TypeScript) lives in the plugin source tree:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>nemoclaw/src/blueprint/
-├── runner.ts                       CLI runner — plan / apply / status / rollback
+├── runner.ts                       CLI runner: plan / apply / status / rollback
 ├── ssrf.ts                         SSRF endpoint validation (IP + DNS checks)
 ├── snapshot.ts                     Migration snapshot / restore lifecycle
 ├── state.ts                        Persistent run state management
@@ -1040,18 +1041,22 @@ OpenShell intercepts them and routes to the configured provider:</p>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TELEGRAM_BOT_TOKEN</span></code></p></td>
-<td><p>Bot token for the Telegram bridge.</p></td>
+<td><p>Telegram bot token you provide before <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code>. OpenShell stores it in a provider; the sandbox receives placeholders, not the raw secret.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ALLOWED_CHAT_IDS</span></code></p></td>
-<td><p>Comma-separated list of Telegram chat IDs allowed to message the agent.</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">TELEGRAM_ALLOWED_IDS</span></code></p></td>
+<td><p>Comma-separated Telegram user or chat IDs for allowlists when onboarding applies channel restrictions.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">CHAT_UI_URL</span></code></p></td>
 <td><p>URL for the optional chat UI endpoint.</p></td>
 </tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">NEMOCLAW_DISABLE_DEVICE_AUTH</span></code></p></td>
+<td><p>Build-time-only toggle that disables gateway device pairing when set to <code class="docutils literal notranslate"><span class="pre">1</span></code> before the sandbox image is created.</p></td>
+</tr>
 </tbody>
 </table>
 </div>
-<p>For normal setup and reconfiguration, prefer <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code> over editing these files by hand.</p>
+<p>For normal setup and reconfiguration, prefer <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code> over editing these files by hand.
+Do not treat <code class="docutils literal notranslate"><span class="pre">NEMOCLAW_DISABLE_DEVICE_AUTH</span></code> as a runtime setting for an already-created sandbox.</p>
 </section>
 </section>
 

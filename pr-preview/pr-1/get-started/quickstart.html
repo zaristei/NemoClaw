@@ -34,7 +34,7 @@
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=8f2a1f02" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/nvidia-sphinx-theme.css?v=933278ad" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=2e2db37d" />
+    <link rel="stylesheet" type="text/css" href="../_static/enhanced-search.css?v=ef2c6a0b" />
     <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
   
   <!-- So that users can add custom icons -->
@@ -326,6 +326,7 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../about/overview.html">Overview</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/how-it-works.html">How It Works</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about/ecosystem.html">Ecosystem</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../about/release-notes.html">Release Notes</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Get Started</span></p>
@@ -350,7 +351,7 @@
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Deployment</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../deployment/deploy-to-remote-gpu.html">Deploy to a Remote GPU Instance</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../deployment/set-up-telegram-bridge.html">Set Up the Telegram Bridge</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../deployment/set-up-telegram-bridge.html">Set Up Telegram</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../deployment/sandbox-hardening.html">Sandbox Hardening</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
@@ -496,6 +497,12 @@ File issues and feedback through the GitHub repository as the project continues 
 </tbody>
 </table>
 </div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>OpenShell lifecycle
+For NemoClaw-managed environments, use <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code> when you need to create or recreate the OpenShell gateway or sandbox.
+Avoid <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">self-update</span></code>, <code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">update</span> <span class="pre">-g</span> <span class="pre">openshell</span></code>, <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">gateway</span> <span class="pre">start</span> <span class="pre">--recreate</span></code>, or <code class="docutils literal notranslate"><span class="pre">openshell</span> <span class="pre">sandbox</span> <span class="pre">create</span></code> directly unless you intend to manage OpenShell separately and then rerun <code class="docutils literal notranslate"><span class="pre">nemoclaw</span> <span class="pre">onboard</span></code>.</p>
+</div>
 </section>
 <section id="container-runtimes">
 <h3>Container Runtimes<a class="headerlink" href="#container-runtimes" title="Link to this heading">#</a></h3>
@@ -545,6 +552,12 @@ The script installs Node.js if it is not already present, then runs the guided o
 </div>
 <p>If you use nvm or fnm to manage Node.js, the installer may not update your current shell’s PATH.
 If <code class="docutils literal notranslate"><span class="pre">nemoclaw</span></code> is not found after install, run <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">~/.bashrc</span></code> (or <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">~/.zshrc</span></code> for zsh) or open a new terminal.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The onboard flow builds the sandbox image with <code class="docutils literal notranslate"><span class="pre">NEMOCLAW_DISABLE_DEVICE_AUTH=1</span></code> so the dashboard is immediately usable during setup.
+This is a build-time setting baked into the sandbox image, not a runtime knob.
+If you export <code class="docutils literal notranslate"><span class="pre">NEMOCLAW_DISABLE_DEVICE_AUTH</span></code> after onboarding finishes, it has no effect on an existing sandbox.</p>
+</div>
 <p>When the install completes, a summary confirms the running environment:</p>
 <div class="highlight-text notranslate"><div class="highlight"><pre><span></span>──────────────────────────────────────────────────
 Sandbox      my-assistant (Landlock + seccomp + netns)
