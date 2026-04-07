@@ -505,6 +505,58 @@ cleanup() {
   fi
   exit "$gateway_status"
 }
+# ── Mediator daemon ──────────────────────────────────────────────
+# Start the mediator daemon if the binary is available. The mediator
+# provides the syscall API (policy, fork, IPC, signal, etc.) and writes
+# the root workflow token to a file for the agent to read.
+MEDIATOR_DAEMON_BIN="/sandbox/mediator-daemon"
+MEDIATOR_SOCKET_PATH="/run/openshell/mediator.sock"
+MEDIATOR_DB_PATH="sqlite:///sandbox/.mediator/mediator.db?mode=rwc"
+MEDIATOR_TOKEN_FILE="/run/openshell/mediator.sock.token"
+
+start_mediator_daemon() {
+  if [ ! -x "$MEDIATOR_DAEMON_BIN" ]; then
+    return 0
+  fi
+
+  mkdir -p /run/openshell /sandbox/.mediator
+  rm -f "$MEDIATOR_SOCKET_PATH" "$MEDIATOR_TOKEN_FILE"
+
+  echo "[mediator] Starting mediator daemon..." >&2
+  MEDIATOR_SOCKET="$MEDIATOR_SOCKET_PATH" \
+  MEDIATOR_DB="$MEDIATOR_DB_PATH" \
+  nohup "$MEDIATOR_DAEMON_BIN" \
+    --socket "$MEDIATOR_SOCKET_PATH" \
+    --db "$MEDIATOR_DB_PATH" \
+    --token-file "$MEDIATOR_TOKEN_FILE" \
+    > /tmp/mediator.log 2>&1 &
+
+  local waited=0
+  while [ ! -S "$MEDIATOR_SOCKET_PATH" ] && [ $waited -lt 30 ]; do
+    sleep 0.5
+    waited=$((waited + 1))
+  done
+
+  if [ -S "$MEDIATOR_SOCKET_PATH" ]; then
+    export MEDIATOR_SOCKET="$MEDIATOR_SOCKET_PATH"
+    export MEDIATOR_TOKEN="$(cat "$MEDIATOR_TOKEN_FILE" 2>/dev/null || true)"
+    echo "[mediator] daemon ready (socket: $MEDIATOR_SOCKET_PATH)" >&2
+  else
+    echo "[mediator] WARNING: daemon did not start within 15s" >&2
+  fi
+
+  # Write to bashrc/profile so interactive sessions see the env vars.
+  local home="${_SANDBOX_HOME:-${HOME:-/sandbox}}"
+  for rc in "$home/.bashrc" "$home/.profile"; do
+    if [ -w "$rc" ] || [ -w "$(dirname "$rc")" ]; then
+      if ! grep -qF "MEDIATOR_SOCKET" "$rc" 2>/dev/null; then
+        printf '\n# mediator\nexport MEDIATOR_SOCKET="%s"\nexport MEDIATOR_TOKEN="%s"\nexport PATH="/sandbox:$PATH"\n' \
+          "$MEDIATOR_SOCKET_PATH" "$(cat "$MEDIATOR_TOKEN_FILE" 2>/dev/null || true)" >> "$rc"
+      fi
+    fi
+  done
+}
+
 # ── Main ─────────────────────────────────────────────────────────
 
 echo 'Setting up NemoClaw...' >&2
@@ -602,6 +654,9 @@ if [ "$(id -u)" -ne 0 ]; then
   touch /tmp/auto-pair.log
   chmod 600 /tmp/auto-pair.log
 
+  # Start mediator daemon (before gateway so agent has syscall API)
+  start_mediator_daemon
+
   # Start gateway in background, auto-pair, then wait
   nohup "$OPENCLAW" gateway run >/tmp/gateway.log 2>&1 &
   GATEWAY_PID=$!
@@ -654,6 +709,9 @@ validate_openclaw_symlinks
 # as root; the sandbox user cannot remove the flag.
 # Ref: https://github.com/NVIDIA/NemoClaw/issues/1019
 harden_openclaw_symlinks
+
+# Start mediator daemon (before gateway so agent has syscall API)
+start_mediator_daemon
 
 # Start the gateway as the 'gateway' user.
 # SECURITY: The sandbox user cannot kill this process because it runs
