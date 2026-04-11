@@ -1,0 +1,4 @@
+ARG BASE_IMAGE=ghcr.io/nvidia/nemoclaw/sandbox-base:latest
+FROM ${BASE_IMAGE}
+COPY mediator-tools/src/index.ts /usr/local/lib/node_modules/openclaw/extensions/mediator-tools/index.ts
+COPY mediator-tools/openclaw.plugin.json /usr/local/lib/node_modules/openclaw/extensions/mediator-tools/openclaw.plugin.json

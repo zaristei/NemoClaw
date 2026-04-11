@@ -63,6 +63,24 @@ function stageOptimizedSandboxBuildContext(rootDir, tmpDir = os.tmpdir()) {
     path.join(stagedScriptsDir, "nemoclaw-start.sh"),
   );
 
+  // Stage mediator-tools plugin if present (separate OpenClaw plugin that
+  // registers mediator syscalls as native agent tools).
+  const sourceMediatorDir = path.join(rootDir, "mediator-tools");
+  if (fs.existsSync(sourceMediatorDir)) {
+    const stagedMediatorDir = path.join(buildCtx, "mediator-tools");
+    fs.mkdirSync(stagedMediatorDir, { recursive: true });
+    for (const file of ["package.json", "tsconfig.json", "openclaw.plugin.json"]) {
+      const src = path.join(sourceMediatorDir, file);
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, path.join(stagedMediatorDir, file));
+      }
+    }
+    const srcDir = path.join(sourceMediatorDir, "src");
+    if (fs.existsSync(srcDir)) {
+      fs.cpSync(srcDir, path.join(stagedMediatorDir, "src"), { recursive: true });
+    }
+  }
+
   return { buildCtx, stagedDockerfile };
 }
 

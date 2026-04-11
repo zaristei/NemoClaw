@@ -104,6 +104,22 @@ export interface PluginService {
   stop?: (ctx: { config: OpenClawConfig; logger: PluginLogger }) => void | Promise<void>;
 }
 
+/** Tool result returned by execute(). */
+export interface PluginToolResult {
+  content: Array<{ type: string; text: string }>;
+}
+
+/** Registration shape for an agent tool. */
+export interface PluginToolDefinition {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>; // JSON Schema object
+  execute: (
+    toolCallId: string,
+    params: Record<string, unknown>,
+  ) => PluginToolResult | Promise<PluginToolResult>;
+}
+
 /**
  * The API object injected into the plugin's register function by the OpenClaw
  * host. Only the methods we actually call are listed here.
@@ -118,6 +134,7 @@ export interface OpenClawPluginApi {
   registerCommand: (command: PluginCommandDefinition) => void;
   registerProvider: (provider: ProviderPlugin) => void;
   registerService: (service: PluginService) => void;
+  registerTool: (tool: PluginToolDefinition) => void;
   resolvePath: (input: string) => string;
   on: (hookName: string, handler: (...args: unknown[]) => void) => void;
 }

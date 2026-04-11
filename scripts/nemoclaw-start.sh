@@ -510,16 +510,16 @@ cleanup() {
 # provides the syscall API (policy, fork, IPC, signal, etc.) and writes
 # the root workflow token to a file for the agent to read.
 MEDIATOR_DAEMON_BIN="/sandbox/mediator-daemon"
-MEDIATOR_SOCKET_PATH="/run/openshell/mediator.sock"
+MEDIATOR_SOCKET_PATH="/sandbox/.mediator/mediator.sock"
 MEDIATOR_DB_PATH="sqlite:///sandbox/.mediator/mediator.db?mode=rwc"
-MEDIATOR_TOKEN_FILE="/run/openshell/mediator.sock.token"
+MEDIATOR_TOKEN_FILE="/sandbox/.mediator/mediator.sock.token"
 
 start_mediator_daemon() {
   if [ ! -x "$MEDIATOR_DAEMON_BIN" ]; then
     return 0
   fi
 
-  mkdir -p /run/openshell /sandbox/.mediator
+  mkdir -p /sandbox/.mediator
   rm -f "$MEDIATOR_SOCKET_PATH" "$MEDIATOR_TOKEN_FILE"
 
   echo "[mediator] Starting mediator daemon..." >&2
