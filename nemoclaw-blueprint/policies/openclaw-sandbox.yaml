@@ -228,3 +228,21 @@ network_policies:
           - allow: { method: GET, path: "/**" }
     binaries:
       - { path: /usr/local/bin/node }
+
+  # Mediator approval bridge — allows the mediator daemon to POST policy
+  # proposals to the operator's approval bridge for human review.
+  # host.docker.internal resolves to an internal IP, so allowed_ips is
+  # required to bypass the L7 proxy's internal-IP rejection.
+  approval_bridge:
+    endpoints:
+      - host: host.docker.internal
+        port: 8090
+        protocol: rest
+        access: full
+        enforcement: enforce
+        allowed_ips:
+          - 192.168.0.0/16
+          - 172.16.0.0/12
+          - 10.0.0.0/8
+    binaries:
+      - { path: /sandbox/mediator-daemon }

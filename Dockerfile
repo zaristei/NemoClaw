@@ -11,7 +11,7 @@
 # to all FROM directives. Can be overridden via --build-arg.
 ARG BASE_IMAGE=ghcr.io/nvidia/nemoclaw/sandbox-base:latest
 
-# Stage 1: Build TypeScript plugin from source
+# Stage 1a: Build NemoClaw TypeScript plugin from source
 FROM node:22-slim@sha256:4f77a690f2f8946ab16fe1e791a3ac0667ae1c3575c3e4d0d4589e9ed5bfaf3d AS builder
 ENV NPM_CONFIG_AUDIT=false \
     NPM_CONFIG_FUND=false \
@@ -20,6 +20,12 @@ COPY nemoclaw/package.json nemoclaw/package-lock.json nemoclaw/tsconfig.json /op
 COPY nemoclaw/src/ /opt/nemoclaw/src/
 WORKDIR /opt/nemoclaw
 RUN npm ci && npm run build
+
+# Stage 1b: Build mediator-tools plugin (standalone — no NemoClaw dependency)
+COPY mediator-tools/package.json mediator-tools/tsconfig.json /opt/mediator-tools/
+COPY mediator-tools/src/ /opt/mediator-tools/src/
+WORKDIR /opt/mediator-tools
+RUN npm install && npm run build
 
 # Stage 2: Runtime image — pull cached base from GHCR
 FROM ${BASE_IMAGE}
@@ -160,9 +166,20 @@ path = os.path.expanduser('~/.openclaw/openclaw.json'); \
 json.dump(config, open(path, 'w'), indent=2); \
 os.chmod(path, 0o600)"
 
-# Install NemoClaw plugin into OpenClaw
+
+# Install plugins by placing raw TypeScript source in the writable data
+# extensions dir and adding plugins.load.paths to the config.
+# We do NOT use `openclaw plugins install` — the "installed" plugin origin
+# triggers a gateway crash on load (undiagnosed OpenClaw bug). Placing raw
+# Keep the original NemoClaw install line (fails silently — known upstream bug)
 RUN openclaw doctor --fix > /dev/null 2>&1 || true \
     && openclaw plugins install /opt/nemoclaw > /dev/null 2>&1 || true
+# Place mediator-tools files in the data extensions dir. They're dormant
+# until stack.sh's post-create step patches plugins.load.paths into the
+# config AFTER the gateway completes its startup migration. The gateway
+# hot-reloads config changes, so the plugin activates without a restart.
+COPY mediator-tools/src/index.ts /sandbox/.openclaw-data/extensions/mediator-tools/index.ts
+COPY mediator-tools/openclaw.plugin.json /sandbox/.openclaw-data/extensions/mediator-tools/openclaw.plugin.json
 
 # Lock openclaw.json via DAC: chown to root so the sandbox user cannot modify
 # it at runtime.  This works regardless of Landlock enforcement status.

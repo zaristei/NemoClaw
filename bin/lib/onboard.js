@@ -1126,6 +1126,10 @@ async function validateCustomOpenAiLikeSelection(
   credentialEnv,
   helpUrl = null,
 ) {
+  if (process.env.NEMOCLAW_SKIP_VALIDATE === "1") {
+    console.log(`  [skip-validate] Skipping endpoint validation for ${label}.`);
+    return { ok: true, api: "openai-completions" };
+  }
   const apiKey = getCredential(credentialEnv);
   const probe = probeOpenAiLikeEndpoint(endpointUrl, model, apiKey);
   if (probe.ok) {
