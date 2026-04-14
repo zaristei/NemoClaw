@@ -11,6 +11,9 @@ import { spawnSync } from "node:child_process";
 const INSTALLER = path.join(import.meta.dirname, "..", "install.sh");
 const CURL_PIPE_INSTALLER = path.join(import.meta.dirname, "..", "install.sh");
 const INSTALLER_PAYLOAD = path.join(import.meta.dirname, "..", "scripts", "install.sh");
+const DEFAULT_NEMOCLAW_VERSION = fs
+  .readFileSync(INSTALLER_PAYLOAD, "utf-8")
+  .match(/^DEFAULT_NEMOCLAW_VERSION="([^"]+)"/m)?.[1] ?? "0.1.0";
 const GITHUB_INSTALL_URL = "git+https://github.com/NVIDIA/NemoClaw.git";
 /**
  * Build an isolated "system bin" directory used by every test in this file
@@ -1710,7 +1713,7 @@ describe("installer pure helpers", () => {
         env: { HOME: tmp, PATH: TEST_SYSTEM_PATH },
       },
     );
-    expect(r.stdout.trim()).toBe("0.1.0");
+    expect(r.stdout.trim()).toBe(DEFAULT_NEMOCLAW_VERSION);
   });
 
   it("installer_version_for_display: hides the placeholder default", () => {
