@@ -48,6 +48,13 @@ COPY nemoclaw-blueprint/ /opt/nemoclaw-blueprint/
 # (setup_instance_dir wizard symlink).
 COPY wizard-agent/AGENTS.md /opt/wizard-agent/AGENTS.md
 
+# Default initial_agent_policy_v1 — the main agent's operating policy at
+# sandbox start. Minimal by design: HTTP only to LiteLLM, may consult
+# the wizard. Operator narrows further by writing
+# /sandbox/.mediator/initial_agent_policy.yaml in the persistent PVC
+# (takes precedence over this image default).
+COPY wizard-agent/initial_agent_policy.yaml /opt/nemoclaw/initial_agent_policy.yaml
+
 # Install runtime dependencies only (no devDependencies, no build step)
 WORKDIR /opt/nemoclaw
 RUN npm ci --omit=dev

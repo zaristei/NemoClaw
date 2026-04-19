@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Default operating policy for the main agent at sandbox startup.
+#
+# The mediator reads this file at bootstrap and preloads it as an
+# approved policy named initial_agent_policy_v1. The sandbox entrypoint
+# (or a subsequent fork_with_policy from init) runs the main agent under
+# this policy.
+#
+# SEARCH ORDER (first hit wins):
+#   1. /sandbox/.mediator/initial_agent_policy.yaml  (operator override)
+#   2. /opt/nemoclaw/initial_agent_policy.yaml       (this file — image default)
+#
+# To narrow the default agent's capabilities without rebuilding the image,
+# write a replacement MediationPolicy YAML to path #1 before the sandbox
+# starts. The operator-override file persists via the sandbox PVC.
+#
+# DESIGN INTENT: keep the agent minimal at start. HTTP restricted to the
+# inference endpoint (LiteLLM) so the agent can reason. The agent
+# consults the wizard (via fork_with_policy(wizard_v1, ...)) to compose
+# proposals for any additional capabilities it needs; each proposal goes
+# through operator approval on the policy channel. Everything else is
+# earned at runtime with operator visibility, not granted at start.
+
+policy_name: initial_agent_policy_v1
+rationale: >
+  Default main-agent policy. HTTP limited to LiteLLM for agent
+  reasoning. Consults the wizard to request capability expansions.
+
+http_allowlist:
+  # LiteLLM proxy endpoint. The mediator's `init_inference_endpoint`
+  # config should match this value; if your deployment uses a different
+  # hostname, override this file with the correct URL.
+  - "http://host.docker.internal:4000/*"
+
+external_mounts: []
+
+# The agent can fork the wizard on demand. Add other approved policy
+# names (or fnmatch globs) here if the main agent should be able to
+# spawn them directly without consulting the wizard first.
+allowed_child_policies:
+  - "wizard_v1"
+
+bind_ports: null
+
+allowed_ipc_targets: []
+
+allowed_signal_targets: []
+
+allowed_launch_commands:
+  - "openclaw agent *"
