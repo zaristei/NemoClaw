@@ -49,6 +49,15 @@ let _credsDir: string | null = null;
 let _credsFile: string | null = null;
 
 export function getCredsDir(): string {
+  const override = process.env.NEMOCLAW_HOME;
+  if (override) {
+    if (_cachedHome !== override) {
+      _cachedHome = override;
+      _credsDir = override;
+      _credsFile = null;
+    }
+    return _credsDir || override;
+  }
   const home = resolveHomeDir();
   if (_cachedHome !== home) {
     _cachedHome = home;

@@ -21,7 +21,9 @@ export interface SandboxRegistry {
   defaultSandbox: string | null;
 }
 
-export const REGISTRY_FILE = path.join(process.env.HOME || "/tmp", ".nemoclaw", "sandboxes.json");
+const NEMOCLAW_STATE_DIR =
+  process.env.NEMOCLAW_HOME || path.join(process.env.HOME || "/tmp", ".nemoclaw");
+export const REGISTRY_FILE = path.join(NEMOCLAW_STATE_DIR, "sandboxes.json");
 export const LOCK_DIR = `${REGISTRY_FILE}.lock`;
 export const LOCK_OWNER = path.join(LOCK_DIR, "owner");
 export const LOCK_STALE_MS = 10_000;

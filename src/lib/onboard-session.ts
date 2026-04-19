@@ -13,7 +13,8 @@ import path from "node:path";
 import type { WebSearchConfig } from "./web-search";
 
 export const SESSION_VERSION = 1;
-export const SESSION_DIR = path.join(process.env.HOME || "/tmp", ".nemoclaw");
+export const SESSION_DIR =
+  process.env.NEMOCLAW_HOME || path.join(process.env.HOME || "/tmp", ".nemoclaw");
 export const SESSION_FILE = path.join(SESSION_DIR, "onboard-session.json");
 export const LOCK_FILE = path.join(SESSION_DIR, "onboard.lock");
 const VALID_STEP_STATES = new Set(["pending", "in_progress", "complete", "failed", "skipped"]);
