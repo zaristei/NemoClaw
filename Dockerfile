@@ -36,6 +36,16 @@ RUN (apt-get remove --purge -y gcc gcc-12 g++ g++-12 cpp cpp-12 make \
     && apt-get autoremove --purge -y \
     && rm -rf /var/lib/apt/lists/*
 
+# Upgrade OpenClaw to 2026.4.15 (base image ships 2026.4.2).
+# 2026.4.8 #59007 skips target DNS pinning when trusted env-proxy is active,
+# fixing web_fetch EAI_AGAIN failures in proxy-only sandboxes.
+# 2026.4.15 #67303 enforces tool-name collision checks — our mediator-tools
+# plugin names have been audited as collision-free against built-ins.
+# Skip 2026.4.14 — audio allowPrivateNetwork regression fixed in 4.15.
+ARG OPENCLAW_UPGRADE_VERSION=2026.4.15
+RUN npm install -g --no-audit --no-fund --no-progress "openclaw@${OPENCLAW_UPGRADE_VERSION}" \
+    && openclaw --version
+
 
 # Copy built plugin and blueprint into the sandbox
 COPY --from=builder /opt/nemoclaw/dist/ /opt/nemoclaw/dist/
