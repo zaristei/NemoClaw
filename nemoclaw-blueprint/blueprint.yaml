@@ -3,7 +3,11 @@
 
 version: "0.1.0"
 min_openshell_version: "0.0.24"
-max_openshell_version: "0.0.26"
+# Bumped from 0.0.26 (upstream default) because our fork ships the
+# simplified mediator on top of upstream OpenShell ToT (0.0.33 at cut).
+# Narrower values here silently reject locally-built supervisors in the
+# NemoClaw onboarding preflight.
+max_openshell_version: "0.0.99"
 min_openclaw_version: "2026.4.2"
 # Mirrors the components.sandbox.image manifest digest below. Lets a
 # downstream consumer (or release tooling) verify the blueprint declares
