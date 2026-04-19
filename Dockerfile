@@ -37,6 +37,17 @@ COPY nemoclaw/openclaw.plugin.json /opt/nemoclaw/
 COPY nemoclaw/package.json nemoclaw/package-lock.json /opt/nemoclaw/
 COPY nemoclaw-blueprint/ /opt/nemoclaw-blueprint/
 
+# Policy wizard — system prompt consumed by OpenClaw when the mediator
+# forks a wizard_v1 workflow. The fork_with_policy syscall symlinks this
+# AGENTS.md into each wizard workflow's workspace so `openclaw agent
+# --local` reads it from its cwd on startup, giving the wizard its
+# identity + policy grammar + subset semantics + output contract.
+#
+# See also: openshell-sandbox src/mediator/init.rs (wizard_v1 policy
+# declaration) and src/mediator/syscalls/fork_with_policy.rs
+# (setup_instance_dir wizard symlink).
+COPY wizard-agent/AGENTS.md /opt/wizard-agent/AGENTS.md
+
 # Install runtime dependencies only (no devDependencies, no build step)
 WORKDIR /opt/nemoclaw
 RUN npm ci --omit=dev
